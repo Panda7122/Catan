@@ -16,7 +16,7 @@ const int ORDER[19] = {16, 17, 18, 15, 11, 6, 2, 1, 0, 3,
                        7,  12, 13, 14, 10, 5, 4, 8, 9};
 const int NUMBER[18] = {5, 2, 6,  3, 8, 10, 9, 12, 11,
                         4, 8, 10, 9, 4, 5,  6, 3,  11};
-const int TEAMCOLOR[5] = {255, 93, 75, 82, 196};
+const int TEAMCOLOR[7] = {255, 93, 75, 82, 196, 10, 15};
 const int PIECECOLOR[6] = {11, 28, 202, 145, 94, 237};
 const int PORTCOLOR[6] = {0, 28, 202, 145, 94, 237};
 const char PORTTEXT[6] = {'?', 'l', 'b', 'w', 'h', 'm'};
@@ -42,6 +42,8 @@ piece land[19];
 int playerNumber = 0;
 int developCard[25];
 int nextdevelopCard = 0;
+int longestPerson = -1;
+int mostKnightPerson = -1;
 void initGame(piece *p, node *n, side *s) {
     // corner bind
     for (int i = 0; i < 19; ++i) {
@@ -120,13 +122,11 @@ void initPlayer(player *p) {
     p->knight = p->road = p->Score = 0;
     p->haveNode = create_vector_vectorInt();
     p->haveSide = create_vector_vectorInt();
-    p->havePort = create_vector_vectorInt();
     p->type = 0;
 }
 void freePlayer(player *p) {
     p->haveNode->free(p->haveNode);
     p->haveSide->free(p->haveSide);
-    p->havePort->free(p->havePort);
     p->card->free(p->card);
     free(p);
 }
@@ -685,9 +685,6 @@ void chooseRobber(player *p, int index) {
         }
     }
     robber(land, &robberLoc, locate);
-    if (p[index].bot) {
-    } else {
-    }
 }
 bool testBuildRoad(player *Players, int index) {
     if (Players[index].resource[BRICKS] >= 1 &&
@@ -758,4 +755,55 @@ bool testBuildCity(player *Players, int index) {
         }
     }
     return 0;
+}
+
+void useDevlopCard(player *Players, int index) {}
+void trade(player *Players, int index) {}
+bool checkWin(player *Players, int index) {
+    int score = Players[index].Score;
+    for (int i = 0; i < Players[index].card->size; ++i) {
+        if (Players[index].card->data[i] >= CHAPEL) {
+            ++score;
+        }
+    }
+    return score >= 10;
+}
+void updateLongestRoad(player *Players, int index) {
+    int table[54][54] = {0};
+    for (int i = 0; i < 54; ++i) {
+        for (int j = 0; j < 54; ++j) {
+            if (i == j)
+                table[i][j] = 0;
+            else
+                table[i][j] = 10000;
+        }
+    }
+    for (int i = 0; i < Players[index].haveSide->size; ++i) {
+        table[edge[Players[index].haveSide->data[i]].linkedNode[0]->index]
+             [edge[Players[index].haveSide->data[i]].linkedNode[1]->index] = -1;
+        table[edge[Players[index].haveSide->data[i]].linkedNode[1]->index]
+             [edge[Players[index].haveSide->data[i]].linkedNode[0]->index] = -1;
+    }
+    for (int k = 0; k < 54; ++k) {
+        if (edge[k].belong == Players[index].type)
+            for (int s = 0; s < 54; ++s) {
+                if (edge[s].belong == Players[index].type)
+                    for (int t = 0; t < 54; ++t) {
+                        if (edge[t].belong == Players[index].type)
+                            table[s][t] =
+                                min(table[s][t], table[s][k] + table[k][t]);
+                    }
+            }
+    }
+    int ans = 0;
+    for (int i = 0; i < 54; ++i) {
+        if (edge[i].belong == Players[index].type)
+            for (int j = 0; j < 54; ++j) {
+                if (edge[j].belong == Players[index].type)
+                    if (table[i][j] < ans) {
+                        ans = table[i][j];
+                    }
+            }
+    }
+    Players[index].road = -1 * ans;
 }

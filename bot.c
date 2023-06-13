@@ -76,3 +76,10 @@ int botRobber(piece *land, int playerID) {
     printf("%d\n", bestID);
     return bestID;
 }
+void botChooseBestRoad(piece *p, player *players, int index, int *landID,
+                       int *roadID) {}
+
+void botChooseBestSwttlement(piece *p, player *players, int index, int *landID,
+                             int *roadID) {}
+void botChooseBestCity(piece *p, player *players, int index, int *landID,
+                       int *roadID) {}

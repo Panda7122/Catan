@@ -13,6 +13,8 @@ enum TEAM {
     PLAYER2,  // com1
     PLAYER3,  // com2
     PLAYER4,  // com3
+    PLAYER5,  // com3
+    PLAYER6,  // com3
 };
 
 enum nodeType { NONE, SWTTLEMENT, CITY };
@@ -64,7 +66,6 @@ typedef struct _port {
 typedef struct _player {
     vectorInt *haveNode;
     vectorInt *haveSide;
-    vectorInt *havePort;
     int Score;
     int knight;
     int road;
@@ -85,6 +86,10 @@ void shufflePlayer(player *p, int n, int times);
 void giveResource(piece *land, int index, player *p, int playerNum);
 void robber(piece *land, int *robberLoc, int locate);
 void chooseRobber(player *p, int index);
+void useDevlopCard(player *Players, int index);
+void trade(player *Players, int index);
+bool checkWin(player *Players, int index);
+void updateLongestRoad(player *Players, int index);
 bool testBuildRoad(player *Players, int index);
 bool testBuildSwttlement(player *Players, int index);
 bool testBuildCity(player *Players, int index);
