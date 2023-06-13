@@ -8,68 +8,45 @@
 #include <time.h>
 
 // #include "panda.h"
+#include "bot.h"
 #include "structure.h"
 #include "vectorInt.h"
-#define SEASIZE 2
+#define SEASIZE 13
 #define MAPSIZE 4
-const int ORDER[19] = {16, 17, 18, 15, 11, 6, 2, 1, 0, 3,
-                       7,  12, 13, 14, 10, 5, 4, 8, 9};
-const int NUMBER[18] = {5, 2, 6,  3, 8, 10, 9, 12, 11,
-                        4, 8, 10, 9, 4, 5,  6, 3,  11};
+extern const int ORDER[19];
+extern const int NUMBER[18];
+extern const int PIECECOLOR[6];
 // const int TEAMCOLOR[5] = {255, 9, 75, 82, 196};
 extern int TEAMCOLOR[5];
 extern char resourceStr[6][10];
 
-static void initPlayer(player *p) {
-    p->card = create_vector_vectorInt();
-    for (int i = 1; i <= 5; ++i) p->resource[i] = 0;
-    p->knight = p->road = p->Score = 0;
-    p->haveNode = create_vector_vectorInt();
-    p->haveSide = create_vector_vectorInt();
-    p->havePort = create_vector_vectorInt();
-    p->type = 0;
-}
-static void freePlayer(player *p) {
-    p->haveNode->free(p->haveNode);
-    p->haveSide->free(p->haveSide);
-    p->havePort->free(p->havePort);
-    p->card->free(p->card);
-    free(p);
-}
-static void shufflePlayer(player *p, int n, int times) {
-    srand(time(NULL));
-    for (int i = 0; i < times; ++i) {
-        int a = rand() % n;
-        int b = rand() % n;
-        player tmp = p[a];
-        p[a] = p[b];
-        p[b] = tmp;
-    }
-}
-static int dicePiece[13][2] = {0};
-static int desertLoc = -1;
-static node corner[54];
-static side edge[72];
-static port tradePort[9];
-static player gamePlayer[6];
-static piece land[19];
-static int playerNumber = 0;
-static int developCard[25];
+extern int dicePiece[13][2];
+extern int robberLoc;
+extern node corner[54];
+extern side edge[72];
+extern port tradePort[9];
+extern player gamePlayer[6];
+extern piece land[19];
+extern int playerNumber;
+extern int developCard[25];
+extern int nextdevelopCard;
 void setUpGame() {
     while (1) {
+        // ask player number
         printf("how mamy player?");
         scanf("%d", &playerNumber);
-        if (playerNumber <= 4 && playerNumber >= 2) {
+        if (playerNumber <= 4 && playerNumber >= 2) {  // in 2~4 people
             break;
-        } else {
-            printf("it shoud in [2,4]\n");
         }
+        printf("it shoud in [2,4]\n");
     }
+    // setup develop card
     for (int i = 0; i < 14; ++i) developCard[i] = KNIGHT;
     for (int i = 14; i < 20; i += 2)
         developCard[i] = developCard[i + 1] = (i >> 1) - 6;
     for (int i = 20; i < 25; ++i) developCard[i] = i - 16;
     shuffleInt(developCard, 25, 1000);
+    // set up piece
     for (int i = 2; i <= 12; ++i) {
         dicePiece[i][0] = -1;
         dicePiece[i][1] = -1;
@@ -91,10 +68,11 @@ void setUpGame() {
         }
     }
     shuffle(land, 19, 1000);
+    // set up piece resources
     int cnt = 0;
     for (int i = 0; i < 19; ++i) {
         if (land[ORDER[i]].type == DESERT) {
-            desertLoc = ORDER[i];
+            robberLoc = ORDER[i];
             land[ORDER[i]].number = 7;
             land[ORDER[i]].robber = 1;
         } else {
@@ -106,9 +84,8 @@ void setUpGame() {
             ++cnt;
         }
     }
-    // printf("test");
+    // initialize each corner and edge of land
     for (int i = 0; i < 54; ++i) {
-        // printf("%d ", i);
         initNode(&(corner[i]));
         corner[i].index = i;
     }
@@ -116,13 +93,14 @@ void setUpGame() {
         initSide(&(edge[i]));
         edge[i].index = i;
     }
+    // initialize port
     for (int i = 0; i < 4; ++i) {
         tradePort[i].type = 0;
         tradePort[i].request = 3;
     }
     for (int i = 1; i <= 5; ++i) {
         tradePort[i + 3].type = i;
-        tradePort[i + 4].request = 2;
+        tradePort[i + 3].request = 2;
     }
     shufflePort(tradePort, 9, 1000);
     corner[0].nearPort = &(tradePort[0]);
@@ -143,13 +121,19 @@ void setUpGame() {
     corner[48].nearPort = &(tradePort[6]);
     corner[50].nearPort = &(tradePort[8]);
     corner[51].nearPort = &(tradePort[8]);
+    // combind all corner, edge and land
     initGame(land, corner, edge);
     for (int i = 0; i < playerNumber; ++i) {
         initPlayer(&(gamePlayer[i]));
         gamePlayer[i].type = i + 1;
+        if (i)
+            gamePlayer[i].bot = 1;
+        else
+            gamePlayer[i].bot = 0;
     }
     shufflePlayer(gamePlayer, playerNumber, 100);
     int i, j;
+    // set up initial swttlement and road
     for (int k = 0; k < playerNumber; ++k) {
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
@@ -161,6 +145,7 @@ void setUpGame() {
                 " |land| \n"
                 "3\\  4 /5\n");
             scanf("%d%d", &i, &j);
+            // put first swttlement
             if (land[i].linkedNode[j]->belong == PUBLIC) {
                 int check = 1;
                 for (int l = 0; l < 3; ++l) {
@@ -183,6 +168,7 @@ void setUpGame() {
                 printf("there had people here, input again\n");
             }
         }
+        // put forst road
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
             printf("\e[38;5;%dmplayer %d\e[0m choose your first road:",
@@ -196,9 +182,6 @@ void setUpGame() {
             if (land[i].linkedSide[j]->belong == PUBLIC) {
                 int check = 0;
                 for (int l = 0; l < 2; ++l) {
-                    printf("%d %d\n",
-                           land[i].linkedSide[j]->linkedNode[l]->index,
-                           land[i].linkedSide[j]->linkedNode[l]->belong);
                     if (land[i].linkedSide[j]->linkedNode[l] != NULL &&
                         land[i].linkedSide[j]->linkedNode[l]->belong ==
                             gamePlayer[k].type) {
@@ -222,6 +205,7 @@ void setUpGame() {
         }
     }
     for (int k = playerNumber - 1; k >= 0; --k) {
+        // put second swttlement
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
             printf("\e[38;5;%dmplayer %d\e[0m choose your second swttlement:",
@@ -263,6 +247,7 @@ void setUpGame() {
                 printf("there had people here, input again\n");
             }
         }
+        // put second road
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
             printf("\e[38;5;%dmplayer %d\e[0m choose your second road:",
@@ -297,10 +282,10 @@ void setUpGame() {
             }
         }
     }
-    // printMap(land, 19, tradePort);
 }
 int main() {
     setUpGame();
+    // main part
     for (int i = 0; i < playerNumber; ++i) {
         int state = 0;
         int step = 0;
@@ -312,24 +297,110 @@ int main() {
             }
         }
         while (1) {
-            if (state == 0) {  // doro
+            if (state == 0) {  // draw
                 printf("1.roll dice\n");
                 if (haveK) {
                     printf("2. use Knight Card\n");
                 }
                 printf("your step:");
-                scanf("%d", &step);
+                if (gamePlayer[i].bot)
+                    state = botOption(state, gamePlayer, i, land);
+                else
+                    scanf("%d", &step);
 
                 if (step == 1) {
                     number = rollDice();
                     if (number == 7) {
-                        robber();
+                        chooseRobber(gamePlayer, i);
                     } else {
-                        giveResource(number);
+                        for (int j = 0; j < 19; ++j) {
+                            if (!land[j].robber && land[j].number == number)
+                                giveResource(land, j, gamePlayer, i);
+                        }
                     }
                     state = 1;
                 } else if (step == 2 && haveK) {
-                    robber();
+                    chooseRobber(gamePlayer, i);
+                }
+            } else if (state == 2) {
+                printf("0.end turn\n");
+                printf("1.put road\n");
+                printf("2.put swttlement\n");
+                printf("3.put city\n");
+                printf("4.draw develop card\n");
+                printf("5.use develop card\n");
+                printf("6.trade\n");
+                printf("7.building cost table\n");
+                printf("your step:");
+                if (gamePlayer[i].bot)
+                    state = botOption(state, gamePlayer, i, land);
+                else
+                    scanf("%d", &step);
+                if (step == 0) {
+                    state = 1;
+                    break;
+                } else if (step == 1) {
+                    if (testBuildRoad(gamePlayer, i)) {
+                    } else {
+                        printf("you can not put road\n");
+                    }
+                } else if (step == 2) {
+                    if (testBuildSwttlement(gamePlayer, i)) {
+                    } else {
+                        printf("you can not put road\n");
+                    }
+                } else if (step == 3) {
+                    if (testBuildCity(gamePlayer, i)) {
+                    } else {
+                        printf("you can not put road\n");
+                    }
+                } else if (step == 4) {
+                    if (gamePlayer[i].resource[WOOL] >= 1 &&
+                        gamePlayer[i].resource[WHEAT] >= 1 &&
+                        gamePlayer[i].resource[METAL] >= 1 &&
+                        nextdevelopCard < 25) {
+                    } else {
+                        printf("you can not draw card\n");
+                    }
+                } else if (step == 5) {
+                    int can = 0;
+                    if (gamePlayer[i].card->size == 0)
+                        can = 0;
+                    else {
+                        for (int i = 0; i < gamePlayer[i].card->size; ++i) {
+                            if (gamePlayer[i].card->data[i] <= 4) {
+                                can = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (can) {
+                    } else {
+                        printf("you don't have develop card can use\n");
+                    }
+
+                } else if (step == 6) {
+                } else if (step == 7) {
+                    printf("Building Cost Table:\n");
+                    printf(
+                        "1 \e[38;5;%dmwood\e[0m 1 \e[38;5;%dmbrick\e[0m -> "
+                        "road (0 point)\n",
+                        PIECECOLOR[WOOD], PIECECOLOR[BRICKS]);
+                    printf(
+                        "1 \e[38;5;%dmwood\e[0m 1 \e[38;5;%dmbrick\e[0m 1 "
+                        "\e[38;5;%dmwheat\e[0m 1 \e[38;5;%dmmetal\e[0m -> "
+                        "swttlement (1 point)\n",
+                        PIECECOLOR[WOOD], PIECECOLOR[BRICKS], PIECECOLOR[WHEAT],
+                        PIECECOLOR[METAL]);
+                    printf(
+                        "2 \e[38;5;%dmwheats\e[0m 3 \e[38;5;%dmmetals\e[0m -> "
+                        "city (2 points)\n",
+                        PIECECOLOR[WHEAT], PIECECOLOR[METAL]);
+                    printf(
+                        "1 \e[38;5;%dmwheat\e[0m 1 \e[38;5;%dmwool\e[0m 1 "
+                        "\e[38;5;%dmmetal\e[0m -> "
+                        "swttlement (? point)\n",
+                        PIECECOLOR[WHEAT], PIECECOLOR[WOOL], PIECECOLOR[METAL]);
                 }
             }
         }

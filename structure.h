@@ -70,6 +70,7 @@ typedef struct _player {
     int road;
     enum TEAM type;
     vectorInt *card;
+    bool bot;
     int resource[6];
 } player;
 void initGame(piece *p, node *n, side *s);
@@ -78,4 +79,13 @@ void shuffle(piece *p, int n, int times);
 void shufflePort(port *p, int n, int times);
 void shuffleInt(int *p, int n, int times);
 void printMap(const piece *p, int n, const port *t, int size, int space);
+void initPlayer(player *p);
+void freePlayer(player *p);
+void shufflePlayer(player *p, int n, int times);
+void giveResource(piece *land, int index, player *p, int playerNum);
+void robber(piece *land, int *robberLoc, int locate);
+void chooseRobber(player *p, int index);
+bool testBuildRoad(player *Players, int index);
+bool testBuildSwttlement(player *Players, int index);
+bool testBuildCity(player *Players, int index);
 #endif

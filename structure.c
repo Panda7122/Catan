@@ -9,12 +9,17 @@
 #include <string.h>
 #include <time.h>
 
+#include "bot.h"
 #include "panda.h"
 #include "vectorInt.h"
+const int ORDER[19] = {16, 17, 18, 15, 11, 6, 2, 1, 0, 3,
+                       7,  12, 13, 14, 10, 5, 4, 8, 9};
+const int NUMBER[18] = {5, 2, 6,  3, 8, 10, 9, 12, 11,
+                        4, 8, 10, 9, 4, 5,  6, 3,  11};
 const int TEAMCOLOR[5] = {255, 93, 75, 82, 196};
 const int PIECECOLOR[6] = {11, 28, 202, 145, 94, 237};
-const int PORTCOLOR[6] = {241, 136, 255, 9, 226, 246};
-const char PORTTEXT[6] = {'?', 'l', 'w', 'b', 'h', 'm'};
+const int PORTCOLOR[6] = {0, 28, 202, 145, 94, 237};
+const char PORTTEXT[6] = {'?', 'l', 'b', 'w', 'h', 'm'};
 const char NODETYPE[3] = {' ', 's', 'c'};
 const int NUMSHOW[10][7] = {
     {1, 1, 1, 0, 1, 1, 1}, {0, 0, 1, 0, 0, 1, 0}, {1, 0, 1, 1, 1, 0, 1},
@@ -27,6 +32,16 @@ const char resourceStr[6][10] = {"None", "wood",  "bricks",
 const char cardtoString[10][16] = {
     "None",   "Knight",    "Monopoly", "Year Of Plenty", "Road Building",
     "Chapel", "Greathall", "Market",   "Library",        "University"};
+int dicePiece[13][2] = {0};
+int robberLoc = -1;
+node corner[54];
+side edge[72];
+port tradePort[9];
+player gamePlayer[6];
+piece land[19];
+int playerNumber = 0;
+int developCard[25];
+int nextdevelopCard = 0;
 void initGame(piece *p, node *n, side *s) {
     // corner bind
     for (int i = 0; i < 19; ++i) {
@@ -220,6 +235,7 @@ static char numberofPiece(int x, int y, int num) {
 }
 static void printpart(const piece *p, int l, int r, int t, int tl, int size,
                       int space) {
+    /* / \*/
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < space; ++j) printf("\e[48;5;17m \e[0m");
         for (int k = l; k <= r; ++k) {
@@ -324,6 +340,7 @@ static void printpart(const piece *p, int l, int r, int t, int tl, int size,
 
         printf("\n");
     }
+    /*| |*/
     for (int i = 0; i < size; ++i) {
         for (int j = 0; j < space; ++j) printf("\e[48;5;17m \e[0m");
         for (int k = l; k <= r; ++k) {
@@ -331,7 +348,50 @@ static void printpart(const piece *p, int l, int r, int t, int tl, int size,
                 for (int j = 0; j < (size)*3 * 2; ++j)
                     printf("\e[48;5;17m \e[0m");
             if (k == 3 || k == 12)
-                for (int j = 0; j < (size)*3; ++j) printf("\e[48;5;17m \e[0m");
+                for (int j = 0; j < (size)*3; ++j) {
+                    if (k == 3 && j >= size * 3 - 13 && j < size * 3 - 2 &&
+                        i < size && i >= size - 3) {
+                        printf("\e[48;5;%dm", PORTCOLOR[tradePort[3].type]);
+                        if (j - size * 3 + 13 < 2 || j - size * 3 + 13 > 8) {
+                            printf("%c", PORTTEXT[tradePort[3].type]);
+                        } else {
+                            if (j - size * 3 + 13 < 5)
+                                printf("%c",
+                                       numberofPiece(i - size + 3,
+                                                     j - size * 3 + 13 - 2,
+                                                     tradePort[3].request));
+                            else if (j - size * 3 + 13 > 5)
+                                printf("%c", numberofPiece(
+                                                 i - size + 3,
+                                                 j - size * 3 + 12 - 5 - 1, 1));
+                            else {
+                                printf("%c", i - size + 3 == 1 ? ':' : ' ');
+                            }
+                        }
+                        printf("\e[0m");
+                    } else if (k == 12 && j >= size * 3 - 13 &&
+                               j < size * 3 - 2 && i < size && i >= size - 3) {
+                        printf("\e[48;5;%dm", PORTCOLOR[tradePort[4].type]);
+                        if (j - size * 3 + 13 < 2 || j - size * 3 + 13 > 8) {
+                            printf("%c", PORTTEXT[tradePort[4].type]);
+                        } else {
+                            if (j - size * 3 + 13 < 5)
+                                printf("%c",
+                                       numberofPiece(i - size + 3,
+                                                     j - size * 3 + 13 - 2,
+                                                     tradePort[4].request));
+                            else if (j - size * 3 + 13 > 5)
+                                printf("%c", numberofPiece(
+                                                 i - size + 3,
+                                                 j - size * 3 + 12 - 5 - 1, 1));
+                            else {
+                                printf("%c", i - size + 3 == 1 ? ':' : ' ');
+                            }
+                        }
+                        printf("\e[0m");
+                    } else
+                        printf("\e[48;5;17m \e[0m");
+                }
             printf("\e[38;5;%dm|\e[0m", TEAMCOLOR[p[k].linkedSide[2]->belong]);
 
             for (int j = 0; j < 2 * (size)*3 - 1; ++j) {
@@ -355,17 +415,75 @@ static void printpart(const piece *p, int l, int r, int t, int tl, int size,
                 printf("\e[38;5;%dm|\e[0m",
                        TEAMCOLOR[p[k].linkedSide[3]->belong]);
                 if (r == 2 || r == 18)
-                    for (int j = 0; j < (size)*6; ++j)
-                        printf("\e[48;5;17m \e[0m");
+                    for (int j = 0; j < (size)*6; ++j) {
+                        if (r == 2 && j <= 12 && j >= 2 && i < size &&
+                            i >= size - 3) {
+                            printf("\e[48;5;%dm", PORTCOLOR[tradePort[2].type]);
+                            if (j < 4 || j > 10) {
+                                printf("%c", PORTTEXT[tradePort[2].type]);
+                            } else {
+                                if (j < 7)
+                                    printf("%c",
+                                           numberofPiece(i - size + 3, j - 4,
+                                                         tradePort[2].request));
+                                else if (j > 7)
+                                    printf("%c", numberofPiece(i - size + 3,
+                                                               j - 7 - 1, 1));
+                                else {
+                                    printf("%c", i - size + 3 == 1 ? ':' : ' ');
+                                }
+                            }
+                            printf("\e[0m");
+                        } else if (r == 18 && j <= 12 && j >= 2 && i < size &&
+                                   i >= size - 3) {
+                            printf("\e[48;5;%dm", PORTCOLOR[tradePort[7].type]);
+                            if (j < 4 || j > 10) {
+                                printf("%c", PORTTEXT[tradePort[7].type]);
+                            } else {
+                                if (j < 7)
+                                    printf("%c",
+                                           numberofPiece(i - size + 3, j - 4,
+                                                         tradePort[7].request));
+                                else if (j > 7)
+                                    printf("%c", numberofPiece(i - size + 3,
+                                                               j - 7 - 1, 1));
+                                else {
+                                    printf("%c", i - size + 3 == 1 ? ':' : ' ');
+                                }
+                            }
+                            printf("\e[0m");
+                        } else
+                            printf("\e[48;5;17m \e[0m");
+                    }
                 if (r == 6 || r == 15)
                     for (int j = 0; j < (size)*3; ++j)
                         printf("\e[48;5;17m \e[0m");
             }
         }
-        for (int j = 0; j < space; ++j) printf("\e[48;5;17m \e[0m");
+        for (int j = 0; j < space; ++j) {
+            if (r == 11 && j <= 12 && j >= 2 && i < size && i >= size - 3) {
+                printf("\e[48;5;%dm", PORTCOLOR[tradePort[5].type]);
+                if (j < 4 || j > 10) {
+                    printf("%c", PORTTEXT[tradePort[5].type]);
+                } else {
+                    if (j < 7)
+                        printf("%c", numberofPiece(i - size + 3, j - 4,
+                                                   tradePort[5].request));
+                    else if (j > 7)
+                        printf("%c", numberofPiece(i - size + 3, j - 7 - 1, 1));
+                    else {
+                        printf("%c", i - size + 3 == 1 ? ':' : ' ');
+                    }
+                }
+                printf("\e[0m");
+            } else {
+                printf("\e[48;5;17m \e[0m");
+            }
+        }
 
         printf("\n");
     }
+    /* \ / */
     if (l == 16) {
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < space; ++j) printf("\e[48;5;17m \e[0m");
@@ -410,15 +528,125 @@ static void printpart(const piece *p, int l, int r, int t, int tl, int size,
     }
 }
 void printMap(const piece *p, int n, const port *t, int size, int space) {
+    for (int c = 0; c < space >> 1; ++c) {
+        for (int i = 0; i < 10 * 3 * size + 1 + 2 * space; ++i) {
+            if ((space >> 1) - c <= 3 && i > space + 3 * 2 * size - 6 &&
+                i < space + 3 * 2 * size + 6) {
+                printf("\e[48;5;%dm", PORTCOLOR[tradePort[0].type]);
+                if (i < space + 3 * 2 * size - 3 ||
+                    i > space + 3 * 2 * size + 3)
+                    printf("%c", PORTTEXT[tradePort[0].type]);
+                else {
+                    if (i < space + 3 * 2 * size) {
+                        printf("%c",
+                               numberofPiece(3 - (space >> 1) + c,
+                                             i - (space + 3 * 2 * size - 3),
+                                             tradePort[0].request));
+                    } else if (i > space + 3 * 2 * size) {
+                        printf("%c", numberofPiece(
+                                         3 - (space >> 1) + c,
+                                         i - (space + 3 * 2 * size) - 1, 1));
+                    } else {
+                        if (3 - (space >> 1) + c == 1)
+                            printf(":");
+                        else
+                            printf(" ");
+                    }
+                }
+                printf("\e[0m");
+            } else if ((space >> 1) - c <= 3 &&
+                       i > space + 3 * 6 * size - size - 6 &&
+                       i < space + 6 * 3 * size - size + 6) {
+                printf("\e[48;5;%dm", PORTCOLOR[tradePort[1].type]);
+                if (i < space + 3 * 6 * size - size - 3 ||
+                    i > space + 3 * 6 * size - size + 3)
+                    printf("%c", PORTTEXT[tradePort[1].type]);
+                else {
+                    if (i < space + 3 * 6 * size - size) {
+                        printf("%c", numberofPiece(
+                                         3 - (space >> 1) + c,
+                                         i - (space + 3 * 6 * size - size - 3),
+                                         tradePort[1].request));
+                    } else if (i > space + 3 * 6 * size - size) {
+                        printf("%c",
+                               numberofPiece(
+                                   3 - (space >> 1) + c,
+                                   i - (space + 3 * 6 * size - size) - 1, 1));
+                    } else {
+                        if (3 - (space >> 1) + c == 1)
+                            printf(":");
+                        else
+                            printf(" ");
+                    }
+                }
+                printf("\e[0m");
+            } else
+                printf("\e[48;5;17m \e[0m");
+        }
+        printf("\n");
+    }
     printpart(p, 0, 2, 5, t[3].type, size, space);
     printpart(p, 3, 6, 3, t[2].type, size, space);
     printpart(p, 7, 11, 1, t[5].type, size, space);
     printpart(p, 12, 15, 3, t[4].type, size, space);
     printpart(p, 16, 18, 5, t[7].type, size, space);
+    for (int c = 0; c < space >> 1; ++c) {
+        for (int i = 0; i < 10 * 3 * size + 1 + 2 * space; ++i) {
+            if (c < 3 && i > space + 3 * 2 * size - 6 &&
+                i < space + 3 * 2 * size + 6) {
+                printf("\e[48;5;%dm", PORTCOLOR[tradePort[6].type]);
+                if (i < space + 3 * 2 * size - 3 ||
+                    i > space + 3 * 2 * size + 3)
+                    printf("%c", PORTTEXT[tradePort[6].type]);
+                else {
+                    if (i < space + 3 * 2 * size) {
+                        printf("%c",
+                               numberofPiece(c, i - (space + 3 * 2 * size - 3),
+                                             tradePort[6].request));
+                    } else if (i > space + 3 * 2 * size) {
+                        printf("%c", numberofPiece(
+                                         c, i - (space + 3 * 2 * size) - 1, 1));
+                    } else {
+                        if (c == 1)
+                            printf(":");
+                        else
+                            printf(" ");
+                    }
+                }
+                printf("\e[0m");
+            } else if (c < 3 && i > space + 3 * 6 * size - size - 6 &&
+                       i < space + 6 * 3 * size - size + 6) {
+                printf("\e[48;5;%dm", PORTCOLOR[tradePort[8].type]);
+                if (i < space + 3 * 6 * size - size - 3 ||
+                    i > space + 3 * 6 * size - size + 3)
+                    printf("%c", PORTTEXT[tradePort[8].type]);
+                else {
+                    if (i < space + 3 * 6 * size - size) {
+                        printf("%c",
+                               numberofPiece(
+                                   c, i - (space + 3 * 6 * size - size - 3),
+                                   tradePort[8].request));
+                    } else if (i > space + 3 * 6 * size - size) {
+                        printf(
+                            "%c",
+                            numberofPiece(
+                                c, i - (space + 3 * 6 * size - size) - 1, 1));
+                    } else {
+                        if (c == 1)
+                            printf(":");
+                        else
+                            printf(" ");
+                    }
+                }
+                printf("\e[0m");
+            } else
+                printf("\e[48;5;17m \e[0m");
+        }
+        printf("\n");
+    }
 }
-void robber(piece *land, int *robberLoc) {
+void robber(piece *land, int *robberLoc, int locate) {
     printf("Robber!\n");
-    int locate;
     while (1) {
         printf("choice locate:");
         if (locate == *robberLoc)
@@ -443,4 +671,91 @@ void giveResource(piece *land, int index, player *p, int playerNum) {
             }
         }
     }
+}
+void chooseRobber(player *p, int index) {
+    int locate;
+    if (p[index].bot) {
+        locate = botRobber(land, index);
+    } else {
+        printf("which land you want to robber?");
+        while (1) {
+            scanf("%d", &locate);
+            if (locate < 19 && locate >= 0 && !land[locate].robber) break;
+            printf("locate should in [0,18] and not been robber");
+        }
+    }
+    robber(land, &robberLoc, locate);
+    if (p[index].bot) {
+    } else {
+    }
+}
+bool testBuildRoad(player *Players, int index) {
+    if (Players[index].resource[BRICKS] >= 1 &&
+        Players[index].resource[WOOD] >= 1 &&
+        Players[index].haveSide->size <= 15) {
+        for (int i = 0; i < Players[index].haveSide->size; ++i) {
+            for (int j = 0; j < 2; ++j) {
+                for (int k = 0; k < 3; ++k) {
+                    if (edge[Players[index].haveSide->data[i]]
+                            .linkedNode[j]
+                            ->linkedSide[k]
+                            ->belong == None) {
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+bool testBuildSwttlement(player *Players, int index) {
+    if (Players[index].resource[BRICKS] >= 1 &&
+        Players[index].resource[WOOD] >= 1 &&
+        Players[index].resource[WHEAT] >= 1 &&
+        Players[index].resource[WOOL] >= 1) {
+        int count = 0;
+        for (int i = 0; i < Players[index].haveNode->size; ++i) {
+            if (corner[Players[index].haveNode->data[i]].type == SWTTLEMENT)
+                ++count;
+        }
+        if (count >= 5) return 0;
+        for (int i = 0; i < Players[index].haveSide->size; ++i) {
+            int can = 1;
+            for (int j = 0; j < 2; ++j) {
+                if (edge[Players[index].haveSide->data[i]].linkedNode[j] ==
+                    None) {
+                    can = 1;
+                    for (int k = 0; k < 3; ++k) {
+                        if (edge[Players[index].haveSide->data[i]]
+                                .linkedNode[j]
+                                ->linkedNode[k]
+                                ->belong != NONE) {
+                            can = 0;
+                            break;
+                        }
+                    }
+                    if (can) {
+                        return 1;
+                    }
+                }
+            }
+        }
+    }
+    return 0;
+}
+bool testBuildCity(player *Players, int index) {
+    if (Players[index].resource[METAL] >= 3 &&
+        Players[index].resource[WHEAT] >= 2) {
+        int count = 0;
+        for (int i = 0; i < Players[index].haveNode->size; ++i) {
+            if (corner[Players[index].haveNode->data[i]].type == CITY) ++count;
+        }
+        if (count >= 4) return 0;
+        for (int i = 0; i < Players[index].haveNode->size; ++i) {
+            if (corner[Players[index].haveNode->data[i]].type == SWTTLEMENT) {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
