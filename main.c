@@ -393,6 +393,7 @@ int main() {
                 else
                     scanf("%d", &step);
                 if (step == 0) {
+                    printf("end turn\n");
                     state = 0;
                     break;
                 } else if (step == 1) {
@@ -438,7 +439,8 @@ int main() {
                                 gamePlayer[i].resource[WOOD]--;
                                 gamePlayer[i].resource[BRICKS]--;
                                 updateLongestRoad(gamePlayer, i);
-
+                                printf("now longest path length => %d\n",
+                                       gamePlayer[i].road);
                                 if (gamePlayer[i].road >= 5) {
                                     if (longestPerson == -1) {
                                         longestPerson = gamePlayer[i].type;

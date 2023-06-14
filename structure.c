@@ -1061,8 +1061,8 @@ void throwHalfResource(player *Players, int index) {
         printf("%d.%s:%d\n", i, resourceStr[i], Players[index].resource[i]);
         cnt += Players[index].resource[i];
     }
-    printf("you need throw %d resources", cnt);
-    for (int i = 0; i < cnt; ++i) {
+    printf("you need throw %d resources", cnt / 2 + (cnt % 2));
+    for (int i = 0; i < cnt / 2 + (cnt % 2); ++i) {
         printf("%d choose a resource to throw away\n", i + 1);
         int choose;
         if (Players[index].bot) {
