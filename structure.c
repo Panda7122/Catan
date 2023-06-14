@@ -703,10 +703,12 @@ void stoleResource(player *p, int index) {
         }
     } else {
         while (1) {
+            printf("which player you want steal resource?");
             scanf("%d", &choose);
             int check = 0;
             for (int i = 0; i < 6; ++i)
-                if (player[i] == choose) check = 1;
+                if (player[i] == choose && player[i] != p[index].type)
+                    check = 1;
             if (check) break;
             printf("Player %d is not on this land\n", choose);
         }
