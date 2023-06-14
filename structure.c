@@ -646,16 +646,6 @@ void printMap(const piece *p, int n, const port *t, int size, int space) {
     }
 }
 void robber(piece *land, int *robberLoc, int locate) {
-    printf("Robber!\n");
-    while (1) {
-        printf("choice locate:");
-        if (locate == *robberLoc)
-            printf("this locate is already robber\n");
-        else if (locate < 0 || locate >= 19)
-            printf("you should input in [0,18]\n");
-        else
-            break;
-    }
     land[*robberLoc].robber = 0;
     land[locate].robber = 1;
     *robberLoc = locate;
@@ -675,6 +665,7 @@ void giveResource(piece *land, int index, player *p, int playerNum) {
     }
 }
 void chooseRobber(player *p, int index) {
+    printf("Robber!\n");
     int locate;
     if (p[index].bot) {
         locate = botRobber(land, index);

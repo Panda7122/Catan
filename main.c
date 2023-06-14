@@ -340,7 +340,7 @@ int main() {
         }
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
-            printf("\e[38;5;%dmplayer %d\e[0m (score:%d) choose your step:",
+            printf("\e[38;5;%dmplayer %d\e[0m (score:%d) choose your step:\n",
                    TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type,
                    gamePlayer[i].Score);
             if (state == 0) {  // draw
@@ -538,7 +538,7 @@ int main() {
                             printf("there had people here\n");
                         }
                     } else {
-                        printf("you can not put road\n");
+                        printf("you can not put swttlement\n");
                     }
                 } else if (step == 3) {
                     if (testBuildCity(gamePlayer, i)) {
@@ -565,7 +565,7 @@ int main() {
                             printf("there can not put city\n");
                         }
                     } else {
-                        printf("you can not put road\n");
+                        printf("you can not put city\n");
                     }
                 } else if (step == 4) {
                     if (gamePlayer[i].resource[WOOL] >= 1 &&
