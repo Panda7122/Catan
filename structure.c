@@ -43,7 +43,7 @@ int playerNumber = 0;
 int developCard[25];
 int nextdevelopCard = 0;
 int longestPerson = -1;
-int mostKnightPerson = -1;
+int strongestPerson = -1;
 void initGame(piece *p, node *n, side *s) {
     // corner bind
     for (int i = 0; i < 19; ++i) {
@@ -851,6 +851,28 @@ void useDevlopCard(player *Players, int index, int *nowsz) {
             chooseRobber(Players, index);
             stoleResource(Players, index);
             Players[index].card->remove(Players[index].card, choose);
+            Players[index].knight++;
+
+            if (Players[index].knight >= 3) {
+                if (strongestPerson == -1) {
+                    strongestPerson = Players[index].type;
+                    Players[index].Score += 2;
+                    printf("you now are the strongest player\n");
+                } else {
+                    int id = 0;
+                    while (1) {
+                        if (strongestPerson == gamePlayer[id].type) break;
+                        ++id;
+                    }
+                    if (Players[index].road > gamePlayer[id].road) {
+                        gamePlayer[id].Score -= 2;
+                        Players[index].Score += 2;
+                        printf("you now are the strongest player\n");
+                        strongestPerson = Players[index].type;
+                    }
+                }
+            }
+
         } else if (Players[index].card->data[choose] == MONOPOLY) {
             int Rec;
             printf("your resource:\n");

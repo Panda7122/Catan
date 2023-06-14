@@ -31,7 +31,7 @@ extern int playerNumber;
 extern int developCard[25];
 extern int nextdevelopCard;
 extern int longestPerson;
-extern int mostKnightPerson;
+extern int strongestPerson;
 void setUpGame() {
     int play, bot;
     while (1) {
@@ -441,6 +441,9 @@ int main() {
                                 if (gamePlayer[i].road >= 5) {
                                     if (longestPerson == -1) {
                                         longestPerson = gamePlayer[i].type;
+                                        gamePlayer[i].Score += 2;
+                                        printf(
+                                            "you now is the longest player\n");
                                     } else {
                                         int id = 0;
                                         while (1) {
@@ -453,6 +456,9 @@ int main() {
                                             gamePlayer[id].road) {
                                             gamePlayer[id].Score -= 2;
                                             gamePlayer[i].Score += 2;
+                                            printf(
+                                                "you now is the longest "
+                                                "player\n");
                                             longestPerson = gamePlayer[i].type;
                                         }
                                     }
