@@ -30,8 +30,8 @@ const int NUMSHOW[10][7] = {
 const char resourceStr[6][10] = {"None", "wood",  "bricks",
                                  "wool", "wheat", "metal"};
 const char cardtoString[10][16] = {
-    "None",   "Knight",    "Monopoly", "Year Of Plenty", "Road Building",
-    "Chapel", "Greathall", "Market",   "Library",        "University"};
+    "Knight",    "Monopoly", "Year Of Plenty", "Road Building", "Chapel",
+    "Greathall", "Market",   "Library",        "University",    "None"};
 int dicePiece[13][2] = {0};
 int robberLoc = -1;
 node corner[54];
@@ -43,7 +43,7 @@ int playerNumber = 0;
 int developCard[25];
 int nextdevelopCard = 0;
 int longestPerson = -1;
-int mostKnightPerson = -1;
+int strongestPerson = -1;
 void initGame(piece *p, node *n, side *s) {
     // corner bind
     for (int i = 0; i < 19; ++i) {
@@ -665,6 +665,8 @@ void giveResource(piece *land, int index, player *p, int playerNum) {
         if (land[index].linkedNode[i]->belong) {
             for (int j = 0; j < playerNum; ++j) {
                 if (p[j].type == land[index].linkedNode[i]->belong) {
+                    printf("give Player %d a %s", p[j].type,
+                           resourceStr[land[index].type]);
                     p[j].resource[land[index].type]++;
                     break;
                 }
@@ -685,6 +687,51 @@ void chooseRobber(player *p, int index) {
         }
     }
     robber(land, &robberLoc, locate);
+}
+void stoleResource(player *p, int index) {
+    int player[6] = {0};
+    for (int i = 0; i < 6; ++i) {
+        player[i] = land[robberLoc].linkedNode[i]->belong;
+    }
+    int choose = 0;
+    if (p[index].bot) {
+        int choosescore = 0;
+        for (int i = 0; i < 6; ++i) {
+            if (player[i] != p[index].type) {
+                if (player[i] != PUBLIC) {
+                    int j = 0;
+                    for (j = 0; j < playerNumber; ++j) {
+                        if (p[j].type == player[i]) break;
+                    }
+                    if (p[j].Score > choosescore) {
+                        choosescore = p[j].Score;
+                        choose = p[j].type;
+                    }
+                }
+            }
+        }
+    } else {
+        while (1) {
+            scanf("%d", &choose);
+            int check = 0;
+            for (int i = 0; i < 6; ++i)
+                if (player[i] == choose) check = 1;
+            if (check) break;
+            printf("Player %d is not on this land\n", choose);
+        }
+    }
+    int j = 0;
+    for (j = 0; j < playerNumber; ++j) {
+        if (p[j].type == choose) break;
+    }
+    while (1) {
+        int rec = rand() % 5 + 1;
+        if (p[j].resource[rec]) {
+            p[j].resource[rec]--;
+            p[index].resource[rec]++;
+            break;
+        }
+    }
 }
 bool testBuildRoad(player *Players, int index) {
     if (Players[index].resource[BRICKS] >= 1 &&
@@ -757,8 +804,216 @@ bool testBuildCity(player *Players, int index) {
     return 0;
 }
 
-void useDevlopCard(player *Players, int index) {}
-void trade(player *Players, int index) {}
+void useDevlopCard(player *Players, int index, int *nowsz) {
+    printf("your card:\n");
+    for (int i = 0; i < Players[index].card->size; ++i) {
+        if (i >= *nowsz) {
+            printf("\e[38;5;1m");
+        }
+        printf("%d.%s-\n", i, cardtoString[Players[index].card->data[i]]);
+        switch (Players[index].card->data[i]) {
+            case 0:
+                printf(" lets the player move the robber\n");
+                break;
+            case 1:
+                printf(
+                    " player can claim all resource cards of a specific "
+                    "declared type\n");
+                break;
+            case 2:
+                printf(
+                    " the player can draw 2 resource cards of their choice "
+                    "from the bank\n");
+                break;
+            case 3:
+                printf(
+                    " player can place 2 roads as if they just built them\n");
+                break;
+            default:
+                printf(
+                    " 1 additional Victory Point is added to the owners total "
+                    "and doesn't need to be played to win.\n");
+                break;
+        }
+        if (i >= *nowsz) {
+            printf("\e[0m");
+        }
+    }
+    printf("which card you want to use?(-1 to cancel)\n");
+    int choose;
+    if (Players[index].bot) {
+        choose = botUseCard(Players, index, *nowsz);
+        printf("%d\n", choose);
+    } else
+        scanf("%d", &choose);
+    if (choose > 0 && choose < *nowsz) {
+        if (Players[index].card->data[choose] == KNIGHT) {
+            chooseRobber(Players, index);
+            stoleResource(Players, index);
+            Players[index].card->remove(Players[index].card, choose);
+            Players[index].knight++;
+
+            if (Players[index].knight >= 3) {
+                if (strongestPerson == -1) {
+                    strongestPerson = Players[index].type;
+                    Players[index].Score += 2;
+                    printf("you now are the strongest player\n");
+                } else {
+                    int id = 0;
+                    while (1) {
+                        if (strongestPerson == gamePlayer[id].type) break;
+                        ++id;
+                    }
+                    if (Players[index].road > gamePlayer[id].road) {
+                        gamePlayer[id].Score -= 2;
+                        Players[index].Score += 2;
+                        printf("you now are the strongest player\n");
+                        strongestPerson = Players[index].type;
+                    }
+                }
+            }
+
+        } else if (Players[index].card->data[choose] == MONOPOLY) {
+            int Rec;
+            printf("your resource:\n");
+            for (int i = 1; i <= 5; ++i) {
+                printf("%d.%s:%d\n", i, resourceStr[i],
+                       Players[index].resource[i]);
+            }
+            printf("choose a resource\n");
+            if (Players[index].bot)
+                Rec = botChooseResource(Players, index);
+            else
+                scanf("%d", &Rec);
+            int total = 0;
+            for (int i = 0; i < playerNumber; ++i) {
+                total += Players[i].resource[Rec];
+                Players[i].resource[Rec] = 0;
+            }
+            Players[index].resource[Rec] = total;
+            Players[index].card->remove(Players[index].card, choose);
+        } else if (Players[index].card->data[choose] == YEAROFPLENTY) {
+            for (int k = 0; k < 2; ++k) {
+                int Rec;
+                printf("your resource:\n");
+                for (int i = 1; i <= 5; ++i) {
+                    printf("%d.%s:%d\n", i, resourceStr[i],
+                           Players[index].resource[i]);
+                }
+                printf("choose a resource\n");
+                if (Players[index].bot)
+                    Rec = botChooseResource(Players, index);
+                else
+                    scanf("%d", &Rec);
+                Players[index].resource[Rec]++;
+            }
+            Players[index].card->remove(Players[index].card, choose);
+        } else if (Players[index].card->data[choose] == ROADBUILDING) {
+            int landID, roadID;
+            for (int k = 0; k < 2; ++k) {
+                while (1) {
+                    printf("choose a road\n");
+                    if (Players[index].bot)
+                        botChooseBestRoad(land, Players, index, &landID,
+                                          &roadID);
+                    else {
+                        scanf("%d%d", &landID, &roadID);
+                    }
+                    if (land[landID].linkedSide[roadID]->belong == PUBLIC) {
+                        int check = 0;
+                        for (int l = 0; l < 2; ++l) {
+                            for (int k = 0; k < 3; ++k) {
+                                if (land[landID]
+                                            .linkedSide[roadID]
+                                            ->linkedNode[l] != NULL &&
+                                    land[landID]
+                                            .linkedSide[roadID]
+                                            ->linkedNode[l]
+                                            ->linkedSide[k] != NULL &&
+                                    land[landID]
+                                            .linkedSide[roadID]
+                                            ->linkedNode[l]
+                                            ->linkedSide[k]
+                                            ->belong == Players[index].type) {
+                                    check = 1;
+                                    break;
+                                }
+                            }
+                            if (check) break;
+                        }
+                        if (check) {
+                            land[landID].linkedSide[roadID]->belong =
+                                Players[index].type;
+                            land[landID].linkedSide[roadID]->type = ROAD;
+                            updateLongestRoad(Players, index);
+
+                            if (Players[index].road >= 5) {
+                                if (longestPerson == -1) {
+                                    longestPerson = Players[index].type;
+                                } else {
+                                    int id = 0;
+                                    while (1) {
+                                        if (longestPerson ==
+                                            gamePlayer[id].type)
+                                            break;
+                                        ++id;
+                                    }
+                                    if (Players[index].road >
+                                        gamePlayer[id].road) {
+                                        gamePlayer[id].Score -= 2;
+                                        Players[index].Score += 2;
+                                        longestPerson = Players[index].type;
+                                    }
+                                }
+                            }
+                            break;
+                        } else {
+                            printf(
+                                "there had no your swttlement near "
+                                "here,input again\n");
+                        }
+                    } else {
+                        printf("there had people here, input again\n");
+                    }
+                }
+            }
+            Players[index].card->remove(Players[index].card, choose);
+            --(*nowsz);
+        }
+    }
+}
+void trade(player *Players, int index) {
+    if (Players[index].bot) return;
+    printf("your resources:\n");
+    for (int i = 1; i <= 5; ++i) {
+        printf("%d.%s:%d\n", i, resourceStr[i], Players[index].resource[i]);
+    }
+    printf("ratio(?:1):");
+    int have[6] = {0};
+    for (int i = 0; i < Players[index].haveNode->size; ++i) {
+        if (corner[Players[index].haveNode->data[i]].nearPort != NULL) {
+            have[corner[Players[index].haveNode->data[i]].nearPort->type] = 1;
+        }
+    }
+    int ratio[6] = {4, 4, 4, 4, 4, 4};
+    for (int i = 1; i <= 5; ++i) {
+        if (have[0]) ratio[i] = 3;
+        if (have[i]) ratio[i] = 2;
+        printf("%s:%d\n", resourceStr[i], ratio[i]);
+    }
+    printf("which resource you want use to trade?");
+    int cost;
+    scanf("%d", &cost);
+    if (Players[index].resource[cost] >= ratio[cost]) {
+        printf("which resource you want to buy?");
+        int buy;
+        scanf("%d", &buy);
+        Players[index].resource[cost] -= ratio[cost];
+        Players[index].resource[buy]++;
+    } else {
+        printf("you don't have enough %s", resourceStr[cost]);
+    }
+}
 bool checkWin(player *Players, int index) {
     int score = Players[index].Score;
     for (int i = 0; i < Players[index].card->size; ++i) {
@@ -768,42 +1023,72 @@ bool checkWin(player *Players, int index) {
     }
     return score >= 10;
 }
+int getLongestPath(int g[54][54], int nowNode) {
+    int ret = 0;
+    for (int i = 0; i < 54; ++i) {
+        if (g[nowNode][i]) {
+            g[nowNode][i] = 0;
+            g[i][nowNode] = 0;
+            ret = max(ret, getLongestPath(g, i) + 1);
+            g[nowNode][i] = 1;
+            g[i][nowNode] = 1;
+        }
+    }
+    return ret;
+}
 void updateLongestRoad(player *Players, int index) {
     int table[54][54] = {0};
     for (int i = 0; i < 54; ++i) {
         for (int j = 0; j < 54; ++j) {
-            if (i == j)
-                table[i][j] = 0;
-            else
-                table[i][j] = 10000;
+            table[i][j] = 0;
         }
     }
     for (int i = 0; i < Players[index].haveSide->size; ++i) {
         table[edge[Players[index].haveSide->data[i]].linkedNode[0]->index]
-             [edge[Players[index].haveSide->data[i]].linkedNode[1]->index] = -1;
+             [edge[Players[index].haveSide->data[i]].linkedNode[1]->index] = 1;
         table[edge[Players[index].haveSide->data[i]].linkedNode[1]->index]
-             [edge[Players[index].haveSide->data[i]].linkedNode[0]->index] = -1;
-    }
-    for (int k = 0; k < 54; ++k) {
-        if (edge[k].belong == Players[index].type)
-            for (int s = 0; s < 54; ++s) {
-                if (edge[s].belong == Players[index].type)
-                    for (int t = 0; t < 54; ++t) {
-                        if (edge[t].belong == Players[index].type)
-                            table[s][t] =
-                                min(table[s][t], table[s][k] + table[k][t]);
-                    }
-            }
+             [edge[Players[index].haveSide->data[i]].linkedNode[0]->index] = 1;
     }
     int ans = 0;
     for (int i = 0; i < 54; ++i) {
-        if (edge[i].belong == Players[index].type)
-            for (int j = 0; j < 54; ++j) {
-                if (edge[j].belong == Players[index].type)
-                    if (table[i][j] < ans) {
-                        ans = table[i][j];
-                    }
+        int b = 0;
+        for (int j = 0; j < 3; ++j) {
+            if (corner[i].linkedSide[j] != NULL &&
+                corner[i].linkedSide[j]->belong == Players[index].type) {
+                b = 1;
+                break;
             }
+        }
+        if (b) ans = max(ans, getLongestPath(table, i));
     }
-    Players[index].road = -1 * ans;
+    Players[index].road = ans;
+}
+void throwHalfResource(player *Players, int index) {
+    printf("your resources:\n");
+    int cnt = 0;
+    for (int i = 1; i <= 5; ++i) {
+        printf("%d.%s:%d\n", i, resourceStr[i], Players[index].resource[i]);
+        cnt += Players[index].resource[i];
+    }
+    printf("you need throw %d resources", cnt);
+    for (int i = 0; i < cnt; ++i) {
+        printf("%d choose a resource to throw away\n", i + 1);
+        int choose;
+        if (Players[index].bot) {
+            int most = 1;
+            for (int i = 1; i <= 5; ++i) {
+                if (Players[index].resource[i] > Players[index].resource[most])
+                    most = i;
+            }
+            choose = most;
+        } else {
+            scanf("%d", &choose);
+        }
+        if (Players[index].resource[choose] <= 0) {
+            printf("this resource is not enough\n");
+            --i;
+        } else {
+            Players[index].resource[choose]--;
+        }
+    }
 }
