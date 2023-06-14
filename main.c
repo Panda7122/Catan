@@ -36,9 +36,9 @@ void setUpGame() {
     int play, bot;
     while (1) {
         // ask player number
-        printf("how mamy player?");
+        printf("how many player(player+bot should in [2,6])?");
         scanf("%d", &play);
-        printf("how mamy bot?");
+        printf("how many bot(player+bot should in [2,6])?");
         scanf("%d", &bot);
         playerNumber = play + bot;
         if (playerNumber <= 6 && playerNumber >= 2) {  // in 2~6 people
@@ -340,8 +340,9 @@ int main() {
         }
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
-            printf("\e[38;5;%dmplayer %d\e[0m choose your step:",
-                   TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type);
+            printf("\e[38;5;%dmplayer %d\e[0m (score:%d) choose your step:",
+                   TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type,
+                   gamePlayer[i].Score);
             if (state == 0) {  // draw
                 printf(" 1.roll dice\n");
                 printf(" 2. use develop Card\n");
