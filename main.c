@@ -19,7 +19,7 @@ extern const int PIECECOLOR[6];
 // const int TEAMCOLOR[5] = {255, 9, 75, 82, 196};
 extern int TEAMCOLOR[5];
 extern char resourceStr[6][10];
-
+extern const char cardtoString[10][16];
 extern int dicePiece[13][2];
 extern int robberLoc;
 extern node corner[54];
@@ -141,6 +141,7 @@ void setUpGame() {
     int i, j;
     // set up initial swttlement and road
     for (int k = 0; k < playerNumber; ++k) {
+        int lasti, lastj;
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
             printf("\e[38;5;%dmplayer %d\e[0m choose your first swttlement:",
@@ -151,7 +152,10 @@ void setUpGame() {
                 " |land| \n"
                 "3\\  4 /5\n");
             if (gamePlayer[k].bot) {
-                botChooseBestSwttlement(land, gamePlayer, k, &i, &j);
+                botChooseDefaultSwttlement(land, gamePlayer, k, &i, &j);
+                printf("%d %d\n", i, j);
+                lasti = i;
+                lastj = j;
             } else
                 scanf("%d%d", &i, &j);
             // put first swttlement
@@ -168,6 +172,9 @@ void setUpGame() {
                 if (check) {
                     land[i].linkedNode[j]->belong = gamePlayer[k].type;
                     land[i].linkedNode[j]->type = SWTTLEMENT;
+                    gamePlayer[k].haveNode->push(gamePlayer[k].haveNode,
+                                                 land[i].linkedNode[j]->index);
+                    ++gamePlayer[k].Score;
 
                     break;
                 } else {
@@ -187,9 +194,10 @@ void setUpGame() {
                 "0/    \\1\n"
                 "2|land|3\n"
                 "4\\    /5\n");
-            if (gamePlayer[k].bot)
-                botChooseBestRoad(land, gamePlayer, k, &i, &j);
-            else
+            if (gamePlayer[k].bot) {
+                botChooseDefaultRoad(land, gamePlayer, k, &i, &j, lasti, lastj);
+                printf("%d %d\n", i, j);
+            } else
                 scanf("%d%d", &i, &j);
             if (land[i].linkedSide[j]->belong == PUBLIC) {
                 int check = 0;
@@ -204,7 +212,9 @@ void setUpGame() {
                 if (check) {
                     land[i].linkedSide[j]->belong = gamePlayer[k].type;
                     land[i].linkedSide[j]->type = ROAD;
-
+                    gamePlayer[k].haveSide->push(gamePlayer[k].haveSide,
+                                                 land[i].linkedSide[j]->index);
+                    updateLongestRoad(gamePlayer, k);
                     break;
                 } else {
                     printf(
@@ -218,6 +228,7 @@ void setUpGame() {
     }
     for (int k = playerNumber - 1; k >= 0; --k) {
         // put second swttlement
+        int lasti, lastj;
         while (1) {
             printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
             printf("\e[38;5;%dmplayer %d\e[0m choose your second swttlement:",
@@ -227,9 +238,12 @@ void setUpGame() {
                 "0/  1 \\2\n"
                 " |land| \n"
                 "3\\  4 /5\n");
-            if (gamePlayer[k].bot)
-                botChooseBestSwttlement(land, gamePlayer, k, &i, &j);
-            else
+            if (gamePlayer[k].bot) {
+                botChooseDefaultSwttlement(land, gamePlayer, k, &i, &j);
+                printf("%d %d\n", i, j);
+                lasti = i;
+                lastj = j;
+            } else
                 scanf("%d%d", &i, &j);
             if (land[i].linkedNode[j]->belong == PUBLIC) {
                 int check = 1;
@@ -244,6 +258,9 @@ void setUpGame() {
                 if (check) {
                     land[i].linkedNode[j]->belong = gamePlayer[k].type;
                     land[i].linkedNode[j]->type = SWTTLEMENT;
+                    gamePlayer[k].haveNode->push(gamePlayer[k].haveNode,
+                                                 land[i].linkedNode[j]->index);
+                    ++gamePlayer[k].Score;
                     printf("you got:");
                     for (int l = 0; l < 3; ++l) {
                         enum pieceType tmp =
@@ -272,9 +289,11 @@ void setUpGame() {
                 "0/    \\1\n"
                 "2|land|3\n"
                 "4\\    /5\n");
-            if (gamePlayer[k].bot)
-                botChooseBestRoad(land, gamePlayer, k, &i, &j);
-            else
+            if (gamePlayer[k].bot) {
+                botChooseDefaultRoad(land, gamePlayer, k, &i, &j, lasti, lastj);
+                printf("%d %d\n", i, j);
+
+            } else
                 scanf("%d%d", &i, &j);
             if (land[i].linkedSide[j]->belong == PUBLIC) {
                 int check = 0;
@@ -289,6 +308,9 @@ void setUpGame() {
                 if (check) {
                     land[i].linkedSide[j]->belong = gamePlayer[k].type;
                     land[i].linkedSide[j]->type = ROAD;
+                    gamePlayer[k].haveSide->push(gamePlayer[k].haveSide,
+                                                 land[i].linkedSide[j]->index);
+                    updateLongestRoad(gamePlayer, k);
                     break;
                 } else {
                     printf(
@@ -310,17 +332,20 @@ int main() {
         int step = 0;
         int number;
         int haveK = 0;
+        int nowSize = gamePlayer[i].card->size;
         for (int j = 0; j < gamePlayer[i].card->size; ++i) {
             if (gamePlayer[i].card->get(gamePlayer[i].card, j) == KNIGHT) {
                 ++haveK;
             }
         }
         while (1) {
+            printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
+            printf("\e[38;5;%dmplayer %d\e[0m choose your step:",
+                   TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type);
             if (state == 0) {  // draw
-                printf("1.roll dice\n");
-                if (haveK) {
-                    printf("2. use Knight Card\n");
-                }
+                printf(" 1.roll dice\n");
+                printf(" 2. use develop Card\n");
+
                 printf("your step:");
                 if (gamePlayer[i].bot)
                     step = botOption(state, gamePlayer, i, land);
@@ -330,7 +355,16 @@ int main() {
                 if (step == 1) {
                     number = rollDice();
                     if (number == 7) {
+                        for (int peo = 0; peo < playerNumber; ++peo) {
+                            int cnt = 0;
+                            for (int c = 1; c < 6; ++c)
+                                cnt += gamePlayer[peo].resource[c];
+                            if (cnt > 7) {
+                                throwHalfResource(gamePlayer, peo);
+                            }
+                        }
                         chooseRobber(gamePlayer, i);
+                        stoleResource(gamePlayer, i);
                     } else {
                         for (int j = 0; j < 19; ++j) {
                             if (!land[j].robber && land[j].number == number)
@@ -338,25 +372,27 @@ int main() {
                         }
                     }
                     state = 1;
-                } else if (step == 2 && haveK) {
-                    chooseRobber(gamePlayer, i);
+                } else if (step == 2) {
+                    useDevlopCard(gamePlayer, i, &nowSize);
                 }
-            } else if (state == 2) {
-                printf("0.end turn\n");
-                printf("1.put road\n");
-                printf("2.put swttlement\n");
-                printf("3.put city\n");
-                printf("4.draw develop card\n");
-                printf("5.use develop card\n");
-                printf("6.trade\n");
-                printf("7.building cost table\n");
+            } else if (state == 1) {
+                printf(" 0.end turn\n");
+                printf(" 1.put road\n");
+                printf(" 2.put swttlement\n");
+                printf(" 3.put city\n");
+                printf(" 4.draw develop card\n");
+                printf(" 5.use develop card\n");
+                printf(" 6.trade\n");
+                printf(" 7.building cost table\n");
+                printf(" 8.show your resources\n");
+                printf(" 9.show your card\n");
                 printf("your step:");
                 if (gamePlayer[i].bot)
                     step = botOption(state, gamePlayer, i, land);
                 else
                     scanf("%d", &step);
                 if (step == 0) {
-                    state = 1;
+                    state = 0;
                     break;
                 } else if (step == 1) {
                     if (testBuildRoad(gamePlayer, i)) {
@@ -375,12 +411,15 @@ int main() {
                             int check = 0;
                             for (int l = 0; l < 2; ++l) {
                                 for (int k = 0; k < 3; ++k) {
-                                    if (land[i].linkedSide[roadID]
+                                    if (land[landID]
+                                                .linkedSide[roadID]
                                                 ->linkedNode[l] != NULL &&
-                                        land[i].linkedSide[roadID]
+                                        land[landID]
+                                                .linkedSide[roadID]
                                                 ->linkedNode[l]
                                                 ->linkedSide[k] != NULL &&
-                                        land[i].linkedSide[roadID]
+                                        land[landID]
+                                                .linkedSide[roadID]
                                                 ->linkedNode[l]
                                                 ->linkedSide[k]
                                                 ->belong ==
@@ -392,9 +431,9 @@ int main() {
                                 if (check) break;
                             }
                             if (check) {
-                                land[i].linkedSide[roadID]->belong =
+                                land[landID].linkedSide[roadID]->belong =
                                     gamePlayer[i].type;
-                                land[i].linkedSide[roadID]->type = ROAD;
+                                land[landID].linkedSide[roadID]->type = ROAD;
                                 gamePlayer[i].resource[WOOD]--;
                                 gamePlayer[i].resource[BRICKS]--;
                                 updateLongestRoad(gamePlayer, i);
@@ -446,9 +485,11 @@ int main() {
                             PUBLIC) {
                             int check = 0;
                             for (int k = 0; k < 3; ++k) {
-                                if (land[i].linkedNode[swttlementID]
+                                if (land[landID]
+                                            .linkedNode[swttlementID]
                                             ->linkedSide[k] != NULL &&
-                                    land[i].linkedNode[swttlementID]
+                                    land[landID]
+                                            .linkedNode[swttlementID]
                                             ->linkedSide[k]
                                             ->belong == gamePlayer[i].type) {
                                     check = 1;
@@ -457,9 +498,11 @@ int main() {
                             }
                             if (check) {
                                 for (int k = 0; k < 3; ++k) {
-                                    if (land[i].linkedNode[swttlementID]
+                                    if (land[landID]
+                                                .linkedNode[swttlementID]
                                                 ->linkedNode[k] != NULL &&
-                                        land[i].linkedNode[swttlementID]
+                                        land[landID]
+                                                .linkedNode[swttlementID]
                                                 ->linkedNode[k]
                                                 ->belong != PUBLIC) {
                                         check = 0;
@@ -467,10 +510,12 @@ int main() {
                                     }
                                 }
                                 if (check) {
-                                    land[i].linkedNode[swttlementID]->belong =
-                                        gamePlayer[i].type;
-                                    land[i].linkedNode[swttlementID]->type =
-                                        SWTTLEMENT;
+                                    land[landID]
+                                        .linkedNode[swttlementID]
+                                        ->belong = gamePlayer[i].type;
+                                    land[landID]
+                                        .linkedNode[swttlementID]
+                                        ->type = SWTTLEMENT;
                                     gamePlayer[i].resource[WOOD]--;
                                     gamePlayer[i].resource[BRICKS]--;
                                     gamePlayer[i].resource[WHEAT]--;
@@ -534,15 +579,15 @@ int main() {
                     if (gamePlayer[i].card->size == 0)
                         can = 0;
                     else {
-                        for (int i = 0; i < gamePlayer[i].card->size; ++i) {
-                            if (gamePlayer[i].card->data[i] <= 4) {
+                        for (int k = 0; k < nowSize; ++k) {
+                            if (gamePlayer[i].card->data[k] < CHAPEL) {
                                 can = 1;
                                 break;
                             }
                         }
                     }
                     if (can) {
-                        useDevlopCard(gamePlayer, i);
+                        useDevlopCard(gamePlayer, i, &nowSize);
                     } else {
                         printf("you don't have develop card can use\n");
                     }
@@ -570,6 +615,46 @@ int main() {
                         "\e[38;5;%dmmetal\e[0m -> "
                         "swttlement (? point)\n",
                         PIECECOLOR[WHEAT], PIECECOLOR[WOOL], PIECECOLOR[METAL]);
+                } else if (step == 8) {
+                    printf("your resources:\n");
+                    for (int k = 1; k <= 5; ++k) {
+                        printf("%d.%s:%d\n", k, resourceStr[k],
+                               gamePlayer[i].resource[k]);
+                    }
+                } else if (step == 9) {
+                    printf("your card:\n");
+                    for (int k = 0; k < gamePlayer[i].card->size; ++k) {
+                        printf("%d.%s-\n", k,
+                               cardtoString[gamePlayer[i].card->data[k]]);
+                        switch (gamePlayer[i].card->data[k]) {
+                            case 0:
+                                printf(" lets the player move the robber\n");
+                                break;
+                            case 1:
+                                printf(
+                                    " player can claim all resource cards of a "
+                                    "specific "
+                                    "declared type\n");
+                                break;
+                            case 2:
+                                printf(
+                                    " the player can draw 2 resource cards of "
+                                    "their choice "
+                                    "from the bank\n");
+                                break;
+                            case 3:
+                                printf(
+                                    " player can place 2 roads as if they just "
+                                    "built them\n");
+                                break;
+                            default:
+                                printf(
+                                    " 1 additional Victory Point is added to "
+                                    "the owners total "
+                                    "and doesn't need to be played to win.\n");
+                                break;
+                        }
+                    }
                 }
                 if (checkWin(gamePlayer, i)) {
                     printf("player %d win!\n", gamePlayer[i].type);

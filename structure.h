@@ -86,11 +86,14 @@ void shufflePlayer(player *p, int n, int times);
 void giveResource(piece *land, int index, player *p, int playerNum);
 void robber(piece *land, int *robberLoc, int locate);
 void chooseRobber(player *p, int index);
-void useDevlopCard(player *Players, int index);
+void useDevlopCard(player *Players, int index, int *nowsz);
 void trade(player *Players, int index);
 bool checkWin(player *Players, int index);
+int getLongestPath(int g[54][54], int nowNode);
 void updateLongestRoad(player *Players, int index);
 bool testBuildRoad(player *Players, int index);
 bool testBuildSwttlement(player *Players, int index);
 bool testBuildCity(player *Players, int index);
+void stoleResource(player *p, int index);
+void throwHalfResource(player *Players, int index);
 #endif
