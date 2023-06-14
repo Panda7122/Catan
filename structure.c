@@ -395,7 +395,11 @@ static void printpart(const piece *p, int l, int r, int t, int tl, int size,
             printf("\e[38;5;%dm|\e[0m", TEAMCOLOR[p[k].linkedSide[2]->belong]);
 
             for (int j = 0; j < 2 * (size)*3 - 1; ++j) {
-                if (j > (size)*3 - 1 && j < (size)*3 + 3 && i < 3) {
+                if (j == 0 && i == 0) {
+                    printf("\e[48;5;%dm%d\e[0m", PIECECOLOR[p[k].type], k / 10);
+                } else if (j == 1 && i == 0) {
+                    printf("\e[48;5;%dm%d\e[0m", PIECECOLOR[p[k].type], k % 10);
+                } else if (j > (size)*3 - 1 && j < (size)*3 + 3 && i < 3) {
                     printf("\e[48;5;%dm%c\e[0m", PIECECOLOR[p[k].type],
                            numberofPiece(i, j - size * 3, p[k].number / 10));
                 } else if (j > (size)*3 + 3 && j < (size)*3 + 7 && i < 3) {
