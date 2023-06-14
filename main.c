@@ -393,6 +393,7 @@ int main() {
                 else
                     scanf("%d", &step);
                 if (step == 0) {
+                    printf("end turn\n");
                     state = 0;
                     break;
                 } else if (step == 1) {
