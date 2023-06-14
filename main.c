@@ -36,9 +36,9 @@ void setUpGame() {
     int play, bot;
     while (1) {
         // ask player number
-        printf("how many player(player+bot should in [2,6])?");
+        printf("how many players(not include bot)?");
         scanf("%d", &play);
-        printf("how many bot(player+bot should in [2,6])?");
+        printf("how many bots(player+bot should in [2,6])?");
         scanf("%d", &bot);
         playerNumber = play + bot;
         if (playerNumber <= 6 && playerNumber >= 2) {  // in 2~6 people
