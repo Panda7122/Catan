@@ -20,7 +20,7 @@ extern const int PIECECOLOR[6];
 extern int TEAMCOLOR[5];
 extern char resourceStr[6][10];
 extern const char cardtoString[10][16];
-extern int dicePiece[13][2];
+// extern int dicePiece[13][2];
 extern int robberLoc;
 extern node corner[54];
 extern side edge[72];
@@ -53,10 +53,10 @@ void setUpGame() {
     for (int i = 20; i < 25; ++i) developCard[i] = i - 16;
     shuffleInt(developCard, 25, 1000);
     // set up piece
-    for (int i = 2; i <= 12; ++i) {
-        dicePiece[i][0] = -1;
-        dicePiece[i][1] = -1;
-    }
+    // for (int i = 2; i <= 12; ++i) {
+    //     dicePiece[i][0] = -1;
+    //     dicePiece[i][1] = -1;
+    // }
     for (int i = 0; i < 19; ++i) {
         initPiece(&(land[i]));
         if (i < 4)
@@ -72,6 +72,7 @@ void setUpGame() {
         } else {
             land[i].type = DESERT;
         }
+        land[i].robber = 0;
     }
     shuffle(land, 19, 1000);
     // set up piece resources
@@ -82,10 +83,10 @@ void setUpGame() {
             land[ORDER[i]].number = 7;
             land[ORDER[i]].robber = 1;
         } else {
-            if (dicePiece[NUMBER[cnt]][0] == -1)
-                dicePiece[NUMBER[cnt]][0] = ORDER[i];
-            else
-                dicePiece[NUMBER[cnt]][1] = ORDER[i];
+            // if (dicePiece[NUMBER[cnt]][0] == -1)
+            //     dicePiece[NUMBER[cnt]][0] = ORDER[i];
+            // else
+            //     dicePiece[NUMBER[cnt]][1] = ORDER[i];
             land[ORDER[i]].number = NUMBER[cnt];
             ++cnt;
         }
@@ -263,11 +264,13 @@ void setUpGame() {
                     ++gamePlayer[k].Score;
                     printf("you got:");
                     for (int l = 0; l < 3; ++l) {
-                        enum pieceType tmp =
-                            land[i].linkedNode[j]->linkedPiece[l]->type;
-                        if (tmp != DESERT) {
-                            printf(" %s", resourceStr[tmp]);
-                            gamePlayer[k].resource[tmp]++;
+                        if (land[i].linkedNode[j]->linkedPiece[l] != NULL) {
+                            enum pieceType tmp =
+                                land[i].linkedNode[j]->linkedPiece[l]->type;
+                            if (tmp != DESERT) {
+                                printf(" %s", resourceStr[tmp]);
+                                gamePlayer[k].resource[tmp]++;
+                            }
                         }
                     }
                     printf("\n");
@@ -327,352 +330,433 @@ int main() {
     setUpGame();
     // main part
     int i = 0;
+    int state = 0;
+    int step = 0;
+    int number;
+    int nowSize = gamePlayer[i].card->size;
+
     while (1) {
-        int state = 0;
-        int step = 0;
-        int number;
-        int haveK = 0;
-        int nowSize = gamePlayer[i].card->size;
-        for (int j = 0; j < gamePlayer[i].card->size; ++i) {
-            if (gamePlayer[i].card->get(gamePlayer[i].card, j) == KNIGHT) {
-                ++haveK;
-            }
-        }
-        while (1) {
-            printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
-            printf("\e[38;5;%dmplayer %d\e[0m (score:%d) choose your step:\n",
-                   TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type,
-                   gamePlayer[i].Score);
-            if (state == 0) {  // draw
-                printf(" 1.roll dice\n");
-                printf(" 2. use develop Card\n");
+        printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
+        printf("\e[38;5;%dmplayer %d\e[0m (score:%d) choose your step:\n",
+               TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type,
+               gamePlayer[i].Score);
+        if (state == 0) {  // draw
+            printf(" 1.roll dice\n");
+            printf(" 2. use develop Card\n");
 
-                printf("your step:");
-                if (gamePlayer[i].bot)
-                    step = botOption(state, gamePlayer, i, land);
-                else
-                    scanf("%d", &step);
+            printf("your step:");
+            if (gamePlayer[i].bot)
+                step = botOption(state, gamePlayer, i, land, nowSize);
+            else
+                scanf("%d", &step);
 
-                if (step == 1) {
-                    number = rollDice();
-                    if (number == 7) {
-                        for (int peo = 0; peo < playerNumber; ++peo) {
-                            int cnt = 0;
-                            for (int c = 1; c < 6; ++c)
-                                cnt += gamePlayer[peo].resource[c];
-                            if (cnt > 7) {
-                                throwHalfResource(gamePlayer, peo);
-                            }
-                        }
-                        chooseRobber(gamePlayer, i);
-                        stoleResource(gamePlayer, i);
-                    } else {
-                        for (int j = 0; j < 19; ++j) {
-                            if (!land[j].robber && land[j].number == number)
-                                giveResource(land, j, gamePlayer, i);
+            if (step == 1) {
+                number = rollDice();
+                if (number == 7) {
+                    for (int peo = 0; peo < playerNumber; ++peo) {
+                        int cnt = 0;
+                        for (int c = 1; c < 6; ++c)
+                            cnt += gamePlayer[peo].resource[c];
+                        if (cnt > 7) {
+                            throwHalfResource(gamePlayer, peo);
                         }
                     }
-                    state = 1;
-                } else if (step == 2) {
-                    useDevlopCard(gamePlayer, i, &nowSize);
+                    chooseRobber(gamePlayer, i);
+                    stoleResource(gamePlayer, i);
+                } else {
+                    for (int j = 0; j < 19; ++j) {
+                        if (!land[j].robber && land[j].number == number)
+                            giveResource(land, j, gamePlayer, playerNumber);
+                    }
                 }
-            } else if (state == 1) {
-                printf(" 0.end turn\n");
-                printf(" 1.put road\n");
-                printf(" 2.put swttlement\n");
-                printf(" 3.put city\n");
-                printf(" 4.draw develop card\n");
-                printf(" 5.use develop card\n");
-                printf(" 6.trade\n");
-                printf(" 7.building cost table\n");
-                printf(" 8.show your resources\n");
-                printf(" 9.show your card\n");
-                printf("your step:");
-                if (gamePlayer[i].bot)
-                    step = botOption(state, gamePlayer, i, land);
-                else
-                    scanf("%d", &step);
-                if (step == 0) {
-                    printf("end turn\n");
-                    ++i;
-                    i %= playerNumber;
-                    state = 0;
-                    // break;
-                } else if (step == 1) {
-                    if (testBuildRoad(gamePlayer, i)) {
-                        int landID, roadID;
-                        printf(
-                            "which edge you want to build road?(land id, edge "
-                            "id):");
-                        if (gamePlayer[i].bot) {
-                            botChooseBestRoad(land, gamePlayer, i, &landID,
-                                              &roadID);
-                            printf("%d %d\n", landID, roadID);
-                        } else {
-                            scanf("%d%d", &landID, &roadID);
+                state = 1;
+            } else if (step == 2) {
+                int can = 0;
+                if (gamePlayer[i].card->size == 0)
+                    can = 0;
+                else {
+                    for (int k = 0; k < nowSize; ++k) {
+                        if (gamePlayer[i].card->data[k] < CHAPEL) {
+                            can = 1;
+                            break;
                         }
-                        if (land[landID].linkedSide[roadID]->belong == PUBLIC) {
-                            int check = 0;
-                            for (int l = 0; l < 2; ++l) {
-                                for (int k = 0; k < 3; ++k) {
-                                    if (land[landID]
-                                                .linkedSide[roadID]
-                                                ->linkedNode[l] != NULL &&
-                                        land[landID]
-                                                .linkedSide[roadID]
-                                                ->linkedNode[l]
-                                                ->linkedSide[k] != NULL &&
-                                        land[landID]
-                                                .linkedSide[roadID]
-                                                ->linkedNode[l]
-                                                ->linkedSide[k]
-                                                ->belong ==
-                                            gamePlayer[i].type) {
-                                        check = 1;
-                                        break;
-                                    }
-                                }
-                                if (check) break;
-                            }
-                            if (check) {
-                                land[landID].linkedSide[roadID]->belong =
-                                    gamePlayer[i].type;
-                                land[landID].linkedSide[roadID]->type = ROAD;
-                                gamePlayer[i].resource[WOOD]--;
-                                gamePlayer[i].resource[BRICKS]--;
-                                updateLongestRoad(gamePlayer, i);
-                                printf("now longest path length => %d\n",
-                                       gamePlayer[i].road);
-                                if (gamePlayer[i].road >= 5) {
-                                    if (longestPerson == -1) {
-                                        longestPerson = gamePlayer[i].type;
-                                        gamePlayer[i].Score += 2;
-                                        printf(
-                                            "you now is the longest player\n");
-                                    } else {
-                                        int id = 0;
-                                        while (1) {
-                                            if (longestPerson ==
-                                                gamePlayer[id].type)
-                                                break;
-                                            ++id;
-                                        }
-                                        if (gamePlayer[i].road >
-                                            gamePlayer[id].road) {
-                                            gamePlayer[id].Score -= 2;
-                                            gamePlayer[i].Score += 2;
-                                            printf(
-                                                "you now is the longest "
-                                                "player\n");
-                                            longestPerson = gamePlayer[i].type;
-                                        }
-                                    }
-                                }
-                            } else {
-                                printf(
-                                    "there had no your swttlement near "
-                                    "here,\n");
-                            }
-                        } else {
-                            printf("there had people here\n");
-                        }
-                    } else {
-                        printf("you can not put road\n");
                     }
-                } else if (step == 2) {
-                    if (testBuildSwttlement(gamePlayer, i)) {
-                        int landID, swttlementID;
-                        printf(
-                            "which corner you want to build swttlement?(land "
-                            "id, corner id):");
-                        if (gamePlayer[i].bot) {
-                            botChooseBestSwttlement(land, gamePlayer, i,
-                                                    &landID, &swttlementID);
-                            printf("%d %d\n", landID, swttlementID);
-                        } else {
-                            scanf("%d%d", &landID, &swttlementID);
-                        }
-                        if (land[landID].linkedNode[swttlementID]->belong ==
-                            PUBLIC) {
-                            int check = 0;
+                }
+                if (can) {
+                    if (useDevlopCard(gamePlayer, i, nowSize))
+                        nowSize--;
+                    else
+                        printf("use faild\n");
+                } else {
+                    printf("you don't have develop card can use\n");
+                }
+            }
+        } else if (state == 1) {
+            printf(" 0.end turn\n");
+            printf(" 1.put road\n");
+            printf(" 2.put swttlement\n");
+            printf(" 3.put city\n");
+            printf(" 4.draw develop card\n");
+            printf(" 5.use develop card\n");
+            printf(" 6.trade\n");
+            printf(" 7.building cost table\n");
+            printf(" 8.show your resources\n");
+            printf(" 9.show your card\n");
+            printf("your step:");
+            if (gamePlayer[i].bot)
+                step = botOption(state, gamePlayer, i, land, nowSize);
+            else
+                scanf("%d", &step);
+            if (step == 0) {
+                printf("end turn\n");
+                ++i;
+                i %= playerNumber;
+                // printf("%d %d\n", i, playerNumber);
+                state = 0;
+                step = 0;
+
+                nowSize = gamePlayer[i].card->size;
+                state = 0;
+                // break;
+            } else if (step == 1) {
+                if (testBuildRoad(gamePlayer, i)) {
+                    int landID, roadID;
+                    printf(
+                        "which edge you want to build road?(land id, edge "
+                        "id):");
+                    if (gamePlayer[i].bot) {
+                        botChooseBestRoad(land, gamePlayer, i, &landID,
+                                          &roadID);
+                        printf("%d %d\n", landID, roadID);
+                    } else {
+                        scanf("%d%d", &landID, &roadID);
+                    }
+                    if (land[landID].linkedSide[roadID]->belong == PUBLIC) {
+                        int check = 0;
+                        for (int l = 0; l < 2; ++l) {
                             for (int k = 0; k < 3; ++k) {
                                 if (land[landID]
-                                            .linkedNode[swttlementID]
+                                            .linkedSide[roadID]
+                                            ->linkedNode[l] != NULL &&
+                                    land[landID]
+                                            .linkedSide[roadID]
+                                            ->linkedNode[l]
                                             ->linkedSide[k] != NULL &&
                                     land[landID]
-                                            .linkedNode[swttlementID]
+                                            .linkedSide[roadID]
+                                            ->linkedNode[l]
                                             ->linkedSide[k]
                                             ->belong == gamePlayer[i].type) {
                                     check = 1;
                                     break;
                                 }
                             }
-                            if (check) {
-                                for (int k = 0; k < 3; ++k) {
-                                    if (land[landID]
-                                                .linkedNode[swttlementID]
-                                                ->linkedNode[k] != NULL &&
-                                        land[landID]
-                                                .linkedNode[swttlementID]
-                                                ->linkedNode[k]
-                                                ->belong != PUBLIC) {
-                                        check = 0;
-                                        break;
+                            if (check) break;
+                        }
+                        if (check) {
+                            land[landID].linkedSide[roadID]->belong =
+                                gamePlayer[i].type;
+                            land[landID].linkedSide[roadID]->type = ROAD;
+                            gamePlayer[i].resource[WOOD]--;
+                            gamePlayer[i].resource[BRICKS]--;
+                            gamePlayer[i].haveSide->push(
+                                gamePlayer[i].haveSide,
+                                land[landID].linkedSide[roadID]->index);
+                            updateLongestRoad(gamePlayer, i);
+                            printf("now longest path length => %d\n",
+                                   gamePlayer[i].road);
+                            if (gamePlayer[i].road >= 5) {
+                                if (longestPerson == -1) {
+                                    longestPerson = gamePlayer[i].type;
+                                    gamePlayer[i].Score += 2;
+                                    printf("you now is the longest player\n");
+                                } else {
+                                    int id = 0;
+                                    while (1) {
+                                        if (longestPerson ==
+                                            gamePlayer[id].type)
+                                            break;
+                                        ++id;
+                                    }
+                                    if (gamePlayer[i].road >
+                                        gamePlayer[id].road) {
+                                        gamePlayer[id].Score -= 2;
+                                        gamePlayer[i].Score += 2;
+                                        printf(
+                                            "you now is the longest "
+                                            "player\n");
+                                        longestPerson = gamePlayer[i].type;
                                     }
                                 }
-                                if (check) {
-                                    land[landID]
-                                        .linkedNode[swttlementID]
-                                        ->belong = gamePlayer[i].type;
-                                    land[landID]
-                                        .linkedNode[swttlementID]
-                                        ->type = SWTTLEMENT;
-                                    gamePlayer[i].resource[WOOD]--;
-                                    gamePlayer[i].resource[BRICKS]--;
-                                    gamePlayer[i].resource[WHEAT]--;
-                                    gamePlayer[i].resource[METAL]--;
-                                    gamePlayer[i].Score++;
-                                } else {
-                                    printf("there had swttlement near here\n");
-                                }
-                            } else {
-                                printf("there had no your road near here\n");
                             }
                         } else {
-                            printf("there had people here\n");
+                            printf(
+                                "there had no your swttlement near "
+                                "here,\n");
                         }
                     } else {
-                        printf("you can not put swttlement\n");
+                        printf("there had people here\n");
                     }
-                } else if (step == 3) {
-                    if (testBuildCity(gamePlayer, i)) {
-                        int landID, cityID;
-                        printf(
-                            "which corner you want to build city?(land "
-                            "id, corner id):");
-                        if (gamePlayer[i].bot) {
-                            botChooseBestCity(land, gamePlayer, i, &landID,
-                                              &cityID);
-                            printf("%d %d\n", landID, cityID);
-                        } else {
-                            scanf("%d%d", &landID, &cityID);
-                        }
-                        if (land[landID].linkedNode[cityID]->belong ==
-                                gamePlayer[i].type &&
-                            land[landID].linkedNode[cityID]->type ==
-                                SWTTLEMENT) {
-                            gamePlayer[i].resource[WHEAT] -= 2;
-                            gamePlayer[i].resource[METAL] -= 3;
-                            land[landID].linkedNode[cityID]->type = CITY;
-                            gamePlayer[i].Score++;
-                        } else {
-                            printf("there can not put city\n");
-                        }
+                } else {
+                    printf("you can not put road\n");
+                }
+            } else if (step == 2) {
+                if (testBuildSwttlement(gamePlayer, i)) {
+                    int landID, swttlementID;
+                    printf(
+                        "which corner you want to build swttlement?(land "
+                        "id, corner id):");
+                    if (gamePlayer[i].bot) {
+                        botChooseBestSwttlement(land, gamePlayer, i, &landID,
+                                                &swttlementID);
+                        printf("%d %d\n", landID, swttlementID);
                     } else {
-                        printf("you can not put city\n");
+                        scanf("%d%d", &landID, &swttlementID);
                     }
-                } else if (step == 4) {
-                    if (gamePlayer[i].resource[WOOL] >= 1 &&
-                        gamePlayer[i].resource[WHEAT] >= 1 &&
-                        gamePlayer[i].resource[METAL] >= 1 &&
-                        nextdevelopCard < 25) {
-                        gamePlayer[i].resource[WOOL]--;
-                        gamePlayer[i].resource[WHEAT]--;
-                        gamePlayer[i].resource[METAL]--;
-                        gamePlayer[i].card->push(gamePlayer[i].card,
-                                                 developCard[nextdevelopCard]);
-                        ++nextdevelopCard;
-                    } else {
-                        printf("you can not draw card\n");
-                    }
-                } else if (step == 5) {
-                    int can = 0;
-                    if (gamePlayer[i].card->size == 0)
-                        can = 0;
-                    else {
-                        for (int k = 0; k < nowSize; ++k) {
-                            if (gamePlayer[i].card->data[k] < CHAPEL) {
-                                can = 1;
+                    if (land[landID].linkedNode[swttlementID]->belong ==
+                        PUBLIC) {
+                        int check = 0;
+                        for (int k = 0; k < 3; ++k) {
+                            if (land[landID]
+                                        .linkedNode[swttlementID]
+                                        ->linkedSide[k] != NULL &&
+                                land[landID]
+                                        .linkedNode[swttlementID]
+                                        ->linkedSide[k]
+                                        ->belong == gamePlayer[i].type) {
+                                check = 1;
                                 break;
                             }
                         }
-                    }
-                    if (can) {
-                        useDevlopCard(gamePlayer, i, &nowSize);
+                        if (check) {
+                            for (int k = 0; k < 3; ++k) {
+                                if (land[landID]
+                                            .linkedNode[swttlementID]
+                                            ->linkedNode[k] != NULL &&
+                                    land[landID]
+                                            .linkedNode[swttlementID]
+                                            ->linkedNode[k]
+                                            ->belong != PUBLIC) {
+                                    check = 0;
+                                    break;
+                                }
+                            }
+                            if (check) {
+                                land[landID].linkedNode[swttlementID]->belong =
+                                    gamePlayer[i].type;
+                                land[landID].linkedNode[swttlementID]->type =
+                                    SWTTLEMENT;
+                                gamePlayer[i].resource[WOOD]--;
+                                gamePlayer[i].resource[BRICKS]--;
+                                gamePlayer[i].resource[WHEAT]--;
+                                gamePlayer[i].resource[METAL]--;
+                                gamePlayer[i].Score++;
+                                gamePlayer[i].haveNode->push(
+                                    gamePlayer[i].haveNode,
+                                    land[landID]
+                                        .linkedNode[swttlementID]
+                                        ->index);
+                            } else {
+                                printf("there had swttlement near here\n");
+                            }
+                        } else {
+                            printf("there had no your road near here\n");
+                        }
                     } else {
-                        printf("you don't have develop card can use\n");
+                        printf("there had people here\n");
                     }
+                } else {
+                    printf("you can not put swttlement\n");
+                }
+            } else if (step == 3) {
+                if (testBuildCity(gamePlayer, i)) {
+                    int landID, cityID;
+                    printf(
+                        "which corner you want to build city?(land "
+                        "id, corner id):");
+                    if (gamePlayer[i].bot) {
+                        botChooseBestCity(land, gamePlayer, i, &landID,
+                                          &cityID);
+                        printf("%d %d\n", landID, cityID);
+                    } else {
+                        scanf("%d%d", &landID, &cityID);
+                    }
+                    if (land[landID].linkedNode[cityID]->belong ==
+                            gamePlayer[i].type &&
+                        land[landID].linkedNode[cityID]->type == SWTTLEMENT) {
+                        gamePlayer[i].resource[WHEAT] -= 2;
+                        gamePlayer[i].resource[METAL] -= 3;
+                        land[landID].linkedNode[cityID]->type = CITY;
+                        gamePlayer[i].Score++;
+                    } else {
+                        printf("there can not put city\n");
+                    }
+                } else {
+                    printf("you can not put city\n");
+                }
+            } else if (step == 4) {
+                if (gamePlayer[i].resource[WOOL] >= 1 &&
+                    gamePlayer[i].resource[WHEAT] >= 1 &&
+                    gamePlayer[i].resource[METAL] >= 1 &&
+                    nextdevelopCard < 25) {
+                    gamePlayer[i].resource[WOOL]--;
+                    gamePlayer[i].resource[WHEAT]--;
+                    gamePlayer[i].resource[METAL]--;
+                    // int idx = i;
+                    gamePlayer[i].card->push(gamePlayer[i].card,
+                                             developCard[nextdevelopCard]);
+                    // i = idx;
+                    ++nextdevelopCard;
+                } else {
+                    printf("you can not draw card\n");
+                }
+            } else if (step == 5) {
+                int can = 0;
+                if (gamePlayer[i].card->size == 0)
+                    can = 0;
+                else {
+                    for (int k = 0; k < nowSize; ++k) {
+                        if (gamePlayer[i].card->data[k] < CHAPEL) {
+                            can = 1;
+                            break;
+                        }
+                    }
+                }
+                if (can) {
+                    if (useDevlopCard(gamePlayer, i, nowSize))
+                        nowSize--;
+                    else
+                        printf("use faild\n");
+                } else {
+                    printf("you don't have develop card can use\n");
+                }
 
-                } else if (step == 6) {
-                    trade(gamePlayer, i);
-                } else if (step == 7) {
-                    printf("Building Cost Table:\n");
-                    printf(
-                        "1 \e[38;5;%dmwood\e[0m 1 \e[38;5;%dmbrick\e[0m -> "
-                        "road (0 point)\n",
-                        PIECECOLOR[WOOD], PIECECOLOR[BRICKS]);
-                    printf(
-                        "1 \e[38;5;%dmwood\e[0m 1 \e[38;5;%dmbrick\e[0m 1 "
-                        "\e[38;5;%dmwheat\e[0m 1 \e[38;5;%dmmetal\e[0m -> "
-                        "swttlement (1 point)\n",
-                        PIECECOLOR[WOOD], PIECECOLOR[BRICKS], PIECECOLOR[WHEAT],
-                        PIECECOLOR[METAL]);
-                    printf(
-                        "2 \e[38;5;%dmwheats\e[0m 3 \e[38;5;%dmmetals\e[0m -> "
-                        "city (2 points)\n",
-                        PIECECOLOR[WHEAT], PIECECOLOR[METAL]);
-                    printf(
-                        "1 \e[38;5;%dmwheat\e[0m 1 \e[38;5;%dmwool\e[0m 1 "
-                        "\e[38;5;%dmmetal\e[0m -> "
-                        "swttlement (? point)\n",
-                        PIECECOLOR[WHEAT], PIECECOLOR[WOOL], PIECECOLOR[METAL]);
-                } else if (step == 8) {
-                    printf("your resources:\n");
-                    for (int k = 1; k <= 5; ++k) {
-                        printf("%d.%s:%d\n", k, resourceStr[k],
-                               gamePlayer[i].resource[k]);
+            } else if (step == 6) {
+                trade(gamePlayer, i);
+            } else if (step == 7) {
+                printf("Building Cost Table:\n");
+                printf(
+                    "1 \e[38;5;%dmwood\e[0m 1 \e[38;5;%dmbrick\e[0m -> "
+                    "road (0 point)\n",
+                    PIECECOLOR[WOOD], PIECECOLOR[BRICKS]);
+                printf(
+                    "1 \e[38;5;%dmwood\e[0m 1 \e[38;5;%dmbrick\e[0m 1 "
+                    "\e[38;5;%dmwheat\e[0m 1 \e[38;5;%dmmetal\e[0m -> "
+                    "swttlement (1 point)\n",
+                    PIECECOLOR[WOOD], PIECECOLOR[BRICKS], PIECECOLOR[WHEAT],
+                    PIECECOLOR[METAL]);
+                printf(
+                    "2 \e[38;5;%dmwheats\e[0m 3 \e[38;5;%dmmetals\e[0m -> "
+                    "city (2 points)\n",
+                    PIECECOLOR[WHEAT], PIECECOLOR[METAL]);
+                printf(
+                    "1 \e[38;5;%dmwheat\e[0m 1 \e[38;5;%dmwool\e[0m 1 "
+                    "\e[38;5;%dmmetal\e[0m -> "
+                    "develop card (? point)\n",
+                    PIECECOLOR[WHEAT], PIECECOLOR[WOOL], PIECECOLOR[METAL]);
+            } else if (step == 8) {
+                printf("your resources:\n");
+                for (int k = 1; k <= 5; ++k) {
+                    printf("%d.%s:%d\n", k, resourceStr[k],
+                           gamePlayer[i].resource[k]);
+                }
+            } else if (step == 9) {
+                printf("your card:\n");
+                for (int k = 0; k < gamePlayer[i].card->size; ++k) {
+                    if (k >= nowSize) {
+                        printf("\e[38;5;1m");
                     }
-                } else if (step == 9) {
-                    printf("your card:\n");
-                    for (int k = 0; k < gamePlayer[i].card->size; ++k) {
-                        printf("%d.%s-\n", k,
-                               cardtoString[gamePlayer[i].card->data[k]]);
-                        switch (gamePlayer[i].card->data[k]) {
+                    printf("%d.%s-\n", k,
+                           cardtoString[gamePlayer[i].card->data[k]]);
+                    switch (gamePlayer[i].card->data[k]) {
+                        case 0:
+                            printf(" lets the player move the robber\n");
+                            break;
+                        case 1:
+                            printf(
+                                " player can claim all resource cards of a "
+                                "specific "
+                                "declared type\n");
+                            break;
+                        case 2:
+                            printf(
+                                " the player can draw 2 resource cards of "
+                                "their choice "
+                                "from the bank\n");
+                            break;
+                        case 3:
+                            printf(
+                                " player can place 2 roads as if they just "
+                                "built them\n");
+                            break;
+                        default:
+                            printf(
+                                " 1 additional Victory Point is added to "
+                                "the owners total "
+                                "and doesn't need to be played to win.\n");
+                            break;
+                    }
+                    if (k >= nowSize) {
+                        printf("\e[0m");
+                    }
+                }
+            }
+            if (checkWin(gamePlayer, i)) {
+                printf("\e[38;5;%dmplayer %d\e[0m win!\n",
+                       TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type);
+                printf("game end\n");
+                printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
+
+                for (int k = 0; k < playerNumber; ++k) {
+                    printf("\e[38;5;%dmplayer %d\e[0m data:\n",
+                           TEAMCOLOR[gamePlayer[k].type], gamePlayer[k].type);
+                    printf(" score: %d\n", gamePlayer[k].Score);
+                    printf(" longest road length: %d\n", gamePlayer[k].road);
+                    printf(" use knight time: %d\n", gamePlayer[k].knight);
+                    printf(" hold card:\n");
+                    for (int cardI = 0; cardI < gamePlayer[k].card->size;
+                         ++cardI) {
+                        printf("  %d.%s-\n", cardI,
+                               cardtoString[gamePlayer[k].card->data[cardI]]);
+                        switch (gamePlayer[k].card->data[cardI]) {
                             case 0:
-                                printf(" lets the player move the robber\n");
+                                printf("   lets the player move the robber\n");
                                 break;
                             case 1:
                                 printf(
-                                    " player can claim all resource cards of a "
+                                    "   player can claim all resource cards of "
+                                    "a "
                                     "specific "
                                     "declared type\n");
                                 break;
                             case 2:
                                 printf(
-                                    " the player can draw 2 resource cards of "
+                                    "   the player can draw 2 resource cards "
+                                    "of "
                                     "their choice "
                                     "from the bank\n");
                                 break;
                             case 3:
                                 printf(
-                                    " player can place 2 roads as if they just "
+                                    "   player can place 2 roads as if they "
+                                    "just "
                                     "built them\n");
                                 break;
                             default:
                                 printf(
-                                    " 1 additional Victory Point is added to "
+                                    "   1 additional Victory Point is added to "
                                     "the owners total "
                                     "and doesn't need to be played to win.\n");
                                 break;
                         }
                     }
+                    printf(" hold resources:\n");
+                    for (int r = 1; r <= 5; ++r) {
+                        printf("  %d.%s:%d\n", r, resourceStr[r],
+                               gamePlayer[k].resource[r]);
+                    }
                 }
-                if (checkWin(gamePlayer, i)) {
-                    printf("\e[38;5;%dmplayer %d\e[0m win!\n",
-                           TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type);
-                    printf("game end\n");
-                    return 0;
-                }
+                return 0;
             }
         }
     }

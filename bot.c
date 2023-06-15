@@ -8,18 +8,19 @@ extern piece land[19];
 extern node corner[54];
 extern side edge[72];
 extern int nextdevelopCard;
-int botOption(int state, player *Players, int index, piece *lands) {
+int botOption(int state, player *Players, int index, piece *lands,
+              int nowsize) {
     // draw
     if (state == 0) {
         printf("1\n");
         return 1;
     }
     // use card
-    if (Players[index].card->size) {
-        for (int i = 0; i < Players[index].card->size; ++i) {
+    if (nowsize && Players[index].card->size) {
+        for (int i = 0; i < nowsize; ++i) {
             if (Players[index].card->data[i] < CHAPEL) {
-                printf("%d\n", state == 1 ? 2 : 5);
-                return state == 1 ? 2 : 5;
+                printf("%d\n", state == 0 ? 2 : 5);
+                return state == 0 ? 2 : 5;
             }
         }
     }
@@ -56,39 +57,42 @@ int botRobber(piece *land, int playerID) {
     int bestID = -1;
     double bestWeights = -1;
     for (int i = 0; i < 19; ++i) {
-        double nowWeights = 0;
-        int peoplenearhere = 0;
-        for (int j = 0; j < 6; ++j) {
-            if (land[i].linkedNode[j]->belong != playerID &&
-                land[i].linkedNode[j]->belong != PUBLIC) {
-                peoplenearhere++;
-            } else if (land[i].linkedNode[j]->belong != playerID) {
-                peoplenearhere = 0;
-                break;
+        if (land[i].type != DESERT) {
+            double nowWeights = 0;
+            int peoplenearhere = 0;
+            for (int j = 0; j < 6; ++j) {
+                if (land[i].linkedNode[j]->belong != playerID &&
+                    land[i].linkedNode[j]->belong != PUBLIC) {
+                    peoplenearhere++;
+                } else if (land[i].linkedNode[j]->belong == playerID) {
+                    peoplenearhere = 0;
+                    break;
+                }
             }
-        }
-        nowWeights = (6 - abs(land[i].number - 7) *
-                              log(10 * (land[i].type == DESERT ? 0.1 : 1)) *
-                              sqrt(peoplenearhere));
-        if (nowWeights > bestWeights) {
-            bestID = i;
-            bestWeights = nowWeights;
+            nowWeights = (6 - abs(land[i].number - 7)) * sqrt(peoplenearhere);
+            // printf("%d %d %lf\n", i, peoplenearhere, nowWeights);
+            if (nowWeights > bestWeights) {
+                bestID = i;
+                bestWeights = nowWeights;
+            }
         }
     }
     printf("%d\n", bestID);
     return bestID;
 }
 int botUseCard(player *players, int index, int nowsz) {
+    // printf("    %d\n", nowsz);
     int haveK = -1;
     int haveRes = -1;
     for (int i = 0; i < nowsz; ++i) {
         if (players[index].card->data[i] == KNIGHT) {
             haveK = i;
             break;
-        } else if (players[index].card->data[i] <= 4) {
-            if (haveRes == -1) haveRes = players[index].card->data[i];
+        } else if (players[index].card->data[i] <= CHAPEL) {
+            if (haveRes == -1) haveRes = i;
         }
     }
+    // printf("%d %d\n", haveK, haveRes);
     if (haveK != -1) return haveK;
     if (haveRes != -1)
         return haveRes;
@@ -151,10 +155,13 @@ void botChooseBestRoad(piece *p, player *players, int index, int *landID,
     for (int rd = 0; rd < players[index].haveSide->size; ++rd) {
         side nowEdge = edge[players[index].haveSide->data[rd]];
         for (int lkNode = 0; lkNode < 2; ++lkNode) {
+            // printf("%d ", lkNode);
             node *nowNode = nowEdge.linkedNode[lkNode];
             for (int lkside = 0; lkside < 3; ++lkside) {
+                // printf("%d %d\n", nowNode->index, lkside);
                 side *thisEdge = nowNode->linkedSide[lkside];
-                if (thisEdge->belong == PUBLIC) {
+                if (thisEdge != NULL && thisEdge->belong == PUBLIC) {
+                    // printf("%d\n", thisEdge->index);
                     table[thisEdge->linkedNode[0]->index]
                          [thisEdge->linkedNode[1]->index] = 1;
                     table[thisEdge->linkedNode[1]->index]
@@ -171,11 +178,13 @@ void botChooseBestRoad(piece *p, player *players, int index, int *landID,
                             }
                         }
 
-                        if (b)
+                        if (b) {
                             nowWeight =
                                 max(nowWeight, getLongestPath(table, i));
+                            // printf("%d %d\n", i, tmp);
+                        }
                     }
-                    if (nowWeight > bestWeight) {
+                    if (nowWeight > bestWeight || bestID == -1) {
                         bestID = thisEdge->index;
                         bestWeight = nowWeight;
                     }
@@ -230,7 +239,7 @@ void botChooseDefaultSwttlement(piece *p, player *players, int index,
                         }
                     }
                     nowWeight *= log(10 * type);
-                    if (nowWeight > bestWeight) {
+                    if (nowWeight > bestWeight || bestIDi == -1) {
                         bestWeight = nowWeight;
                         bestIDi = i;
                         bestIDj = j;
@@ -252,10 +261,12 @@ void botChooseBestSwttlement(piece *p, player *players, int index, int *landID,
             node *nowNode =
                 edge[players[index].haveSide->data[i]].linkedNode[k];
             int check = 1;
-            if (nowNode->belong == players[index].type) check = 0;
+            if (nowNode->belong != PUBLIC) check = 0;
             if (check) {
                 for (int j = 0; j < 3; ++j) {
-                    if (nowNode->linkedNode[j]->belong != PUBLIC) check = 0;
+                    if (nowNode->linkedNode[j] != NULL &&
+                        nowNode->linkedNode[j]->belong != PUBLIC)
+                        check = 0;
                 }
             }
             if (check) {
@@ -274,7 +285,7 @@ void botChooseBestSwttlement(piece *p, player *players, int index, int *landID,
                     }
                 }
                 nowWeight *= log(10 * type);
-                if (nowWeight > bestWeight) {
+                if (nowWeight > bestWeight || bestID == -1) {
                     bestWeight = nowWeight;
                     bestID = nowNode->index;
                 }
