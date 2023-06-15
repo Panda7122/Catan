@@ -671,10 +671,10 @@ void giveResource(piece *land, int index, player *p, int playerNum) {
 void chooseRobber(player *p, int index) {
     printf("Robber!\n");
     int locate;
+    printf("which land you want to robber?");
     if (p[index].bot) {
         locate = botRobber(land, index);
     } else {
-        printf("which land you want to robber?");
         while (1) {
             scanf("%d", &locate);
             if (locate < 19 && locate >= 0 && !land[locate].robber) break;
@@ -689,6 +689,7 @@ void stoleResource(player *p, int index) {
         player[i] = land[robberLoc].linkedNode[i]->belong;
     }
     int choose = 0;
+    printf("which player you want steal resource?");
     if (p[index].bot) {
         int choosescore = 0;
         for (int i = 0; i < 6; ++i) {
@@ -705,9 +706,9 @@ void stoleResource(player *p, int index) {
                 }
             }
         }
+        printf("%d\n", choose);
     } else {
         while (1) {
-            printf("which player you want steal resource?");
             scanf("%d", &choose);
             int check = 0;
             for (int i = 0; i < 6; ++i)

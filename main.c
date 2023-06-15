@@ -394,6 +394,8 @@ int main() {
                     scanf("%d", &step);
                 if (step == 0) {
                     printf("end turn\n");
+                    ++i;
+                    i %= playerNumber;
                     state = 0;
                     break;
                 } else if (step == 1) {
@@ -671,8 +673,6 @@ int main() {
                 }
             }
         }
-        ++i;
-        i %= playerNumber;
     }
 END:
     printf("game end\n");
