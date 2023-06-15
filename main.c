@@ -397,7 +397,7 @@ int main() {
                     ++i;
                     i %= playerNumber;
                     state = 0;
-                    break;
+                    // break;
                 } else if (step == 1) {
                     if (testBuildRoad(gamePlayer, i)) {
                         int landID, roadID;
@@ -668,14 +668,13 @@ int main() {
                     }
                 }
                 if (checkWin(gamePlayer, i)) {
-                    printf("player %d win!\n", gamePlayer[i].type);
-                    goto END;
+                    printf("\e[38;5;%dmplayer %d\e[0m win!\n",
+                           TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type);
+                    printf("game end\n");
+                    return 0;
                 }
             }
         }
     }
-END:
-    printf("game end\n");
-    return 0;
     // rollDice();
 }
