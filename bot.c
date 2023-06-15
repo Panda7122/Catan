@@ -19,7 +19,7 @@ int botOption(int state, player *Players, int index, piece *lands,
     if (nowsize && Players[index].card->size) {
         for (int i = 0; i < nowsize; ++i) {
             if (Players[index].card->data[i] < CHAPEL) {
-                printf("%d(%d)\n", state == 0 ? 2 : 5, i);
+                printf("%d\n", state == 0 ? 2 : 5);
                 return state == 0 ? 2 : 5;
             }
         }
