@@ -762,7 +762,7 @@ bool testBuildRoad(player *Players, int index) {
             for (int j = 0; j < 2; ++j) {
                 node *nownode = nowedge.linkedNode[j];
                 for (int k = 0; k < 3; ++k) {
-                    node *nearSide = nownode->linkedNode[k];
+                    side *nearSide = nownode->linkedSide[k];
                     if (nearSide != NULL && nearSide->belong == PUBLIC) {
                         printf("\n%d:%d %d\n", Players[index].type,
                                nearSide->index, nearSide->belong);
