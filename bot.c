@@ -19,7 +19,7 @@ int botOption(int state, player *Players, int index, piece *lands,
     if (nowsize && Players[index].card->size) {
         for (int i = 0; i < nowsize; ++i) {
             if (Players[index].card->data[i] < CHAPEL) {
-                printf("%d\n", state == 0 ? 2 : 5);
+                printf("%d(%d)\n", state == 0 ? 2 : 5, i);
                 return state == 0 ? 2 : 5;
             }
         }
@@ -88,7 +88,7 @@ int botUseCard(player *players, int index, int nowsz) {
         if (players[index].card->data[i] == KNIGHT) {
             haveK = i;
             break;
-        } else if (players[index].card->data[i] <= CHAPEL) {
+        } else if (players[index].card->data[i] < CHAPEL) {
             if (haveRes == -1) haveRes = i;
         }
     }
