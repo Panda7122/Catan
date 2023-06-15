@@ -663,10 +663,17 @@ void giveResource(piece *land, int index, player *p, int playerNum) {
                 // printf("%d: %d %d", i, p[j].type,
                 //        land[index].linkedNode[i]->belong);
                 if (p[j].type == land[index].linkedNode[i]->belong) {
-                    printf("give \e[38;5;%dmPlayer %d\e[0m a %s\n",
-                           TEAMCOLOR[p[j].type], p[j].type,
-                           resourceStr[land[index].type]);
-                    p[j].resource[land[index].type]++;
+                    if (land[index].linkedNode[i]->type == SWTTLEMENT) {
+                        printf("give \e[38;5;%dmPlayer %d\e[0m a %s\n",
+                               TEAMCOLOR[p[j].type], p[j].type,
+                               resourceStr[land[index].type]);
+                        p[j].resource[land[index].type]++;
+                    } else if (land[index].linkedNode[i]->type == CITY) {
+                        printf("give \e[38;5;%dmPlayer %d\e[0m two %s\n",
+                               TEAMCOLOR[p[j].type], p[j].type,
+                               resourceStr[land[index].type]);
+                        p[j].resource[land[index].type] += 2;
+                    }
                     break;
                 }
             }
@@ -736,7 +743,7 @@ void stoleResource(player *p, int index) {
         int idx = 0;
         for (int i = 0; i < 5; ++i) {
             int rec = arr[i];
-            if (p[j].resource[rec]) {
+            if (p[j].resource[rec] > 0) {
                 p[j].resource[rec]--;
                 printf("stole one %s\n", resourceStr[rec]);
                 p[index].resource[rec]++;
@@ -757,6 +764,8 @@ bool testBuildRoad(player *Players, int index) {
                 for (int k = 0; k < 3; ++k) {
                     node *nearSide = nownode->linkedNode[k];
                     if (nearSide != NULL && nearSide->belong == PUBLIC) {
+                        printf("\n%d:%d %d\n", Players[index].type,
+                               nearSide->index, nearSide->belong);
                         return 1;
                     }
                 }
