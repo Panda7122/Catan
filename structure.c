@@ -749,14 +749,14 @@ void stoleResource(player *p, int index) {
 bool testBuildRoad(player *Players, int index) {
     if (Players[index].resource[BRICKS] >= 1 &&
         Players[index].resource[WOOD] >= 1 &&
-        Players[index].haveSide->size <= 15) {
+        Players[index].haveSide->size < 15) {
         for (int i = 0; i < Players[index].haveSide->size; ++i) {
             side nowedge = edge[Players[index].haveSide->data[i]];
             for (int j = 0; j < 2; ++j) {
                 node *nownode = nowedge.linkedNode[j];
                 for (int k = 0; k < 3; ++k) {
                     node *nearSide = nownode->linkedNode[k];
-                    if (nearSide != NULL && nearSide->belong == None) {
+                    if (nearSide != NULL && nearSide->belong == PUBLIC) {
                         return 1;
                     }
                 }
