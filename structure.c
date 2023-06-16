@@ -778,7 +778,7 @@ bool testBuildSwttlement(player *Players, int index) {
     if (Players[index].resource[BRICKS] >= 1 &&
         Players[index].resource[WOOD] >= 1 &&
         Players[index].resource[WHEAT] >= 1 &&
-        Players[index].resource[WOOL] >= 1) {
+        Players[index].resource[METAL] >= 1) {
         int count = 0;
         for (int i = 0; i < Players[index].haveNode->size; ++i) {
             if (corner[Players[index].haveNode->data[i]].type == SWTTLEMENT)
