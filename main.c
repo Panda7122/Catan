@@ -340,6 +340,9 @@ int main() {
         printf("\e[38;5;%dmplayer %d\e[0m (score:%d) choose your step:\n",
                TEAMCOLOR[gamePlayer[i].type], gamePlayer[i].type,
                gamePlayer[i].Score);
+        int cnt = 0;
+        for (int k = 0; k < gamePlayer[i].card->size; ++k)
+            if (gamePlayer[i].card->data[k] >= CHAPEL) ++cnt;
         if (state == 0) {  // draw
             printf(" 1.roll dice\n");
             printf(" 2. use develop Card\n");
@@ -383,9 +386,10 @@ int main() {
                     }
                 }
                 if (can) {
-                    if (useDevlopCard(gamePlayer, i, nowSize))
+                    if (useDevlopCard(gamePlayer, i, nowSize)) {
+                        printf("yes %d\n", nowSize);
                         nowSize--;
-                    else
+                    } else
                         printf("use faild\n");
                 } else {
                     printf("you don't have develop card can use\n");
@@ -708,11 +712,16 @@ int main() {
                 printMap(land, 19, tradePort, MAPSIZE, SEASIZE);
 
                 for (int k = 0; k < playerNumber; ++k) {
-                    printf("\e[38;5;%dmplayer %d\e[0m data:\n",
-                           TEAMCOLOR[gamePlayer[k].type], gamePlayer[k].type);
+                    printf("\e[38;5;%dm%cplayer %d\e[0m data:\n",
+                           TEAMCOLOR[gamePlayer[k].type], (k == i) ? '*' : '\0',
+                           gamePlayer[k].type);
                     printf(" score: %d\n", gamePlayer[k].Score);
-                    printf(" longest road length: %d\n", gamePlayer[k].road);
-                    printf(" use knight time: %d\n", gamePlayer[k].knight);
+                    printf("%slongest road length: %d\n",
+                           (longestPerson == gamePlayer[k].type) ? " *" : " ",
+                           gamePlayer[k].road);
+                    printf("%suse knight time: %d\n",
+                           (strongestPerson == gamePlayer[k].type) ? " *" : " ",
+                           gamePlayer[k].knight);
                     printf(" hold card:\n");
                     for (int cardI = 0; cardI < gamePlayer[k].card->size;
                          ++cardI) {
