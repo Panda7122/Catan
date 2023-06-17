@@ -72,6 +72,8 @@ typedef struct _player {
     enum TEAM type;
     vectorInt *card;
     bool bot;
+    bool kingofRoad;
+    bool kingofKnight;
     int resource[6];
 } player;
 void initGame(piece *p, node *n, side *s);

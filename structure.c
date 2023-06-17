@@ -16,7 +16,7 @@ const int ORDER[19] = {16, 17, 18, 15, 11, 6, 2, 1, 0, 3,
                        7,  12, 13, 14, 10, 5, 4, 8, 9};
 const int NUMBER[18] = {5, 2, 6,  3, 8, 10, 9, 12, 11,
                         4, 8, 10, 9, 4, 5,  6, 3,  11};
-const int TEAMCOLOR[7] = {255, 93, 75, 82, 196, 10, 15};
+const int TEAMCOLOR[7] = {255, 93, 75, 82, 196, 204, 208};
 const int PIECECOLOR[6] = {11, 28, 202, 145, 94, 237};
 const int PORTCOLOR[6] = {0, 28, 202, 145, 94, 237};
 const char PORTTEXT[6] = {'?', 'l', 'b', 'w', 'h', 'm'};
@@ -123,6 +123,8 @@ void initPlayer(player *p) {
     p->haveNode = create_vector_vectorInt();
     p->haveSide = create_vector_vectorInt();
     p->type = 0;
+    p->kingofKnight = 0;
+    p->kingofRoad = 0;
 }
 void freePlayer(player *p) {
     p->haveNode->free(p->haveNode);
@@ -764,8 +766,8 @@ bool testBuildRoad(player *Players, int index) {
                 for (int k = 0; k < 3; ++k) {
                     side *nearSide = nownode->linkedSide[k];
                     if (nearSide != NULL && nearSide->belong == PUBLIC) {
-                        printf("\n%d:%d %d\n", Players[index].type,
-                               nearSide->index, nearSide->belong);
+                        // printf("\n%d:%d %d\n", Players[index].type,
+                        //        nearSide->index, nearSide->belong);
                         return 1;
                     }
                 }
@@ -778,7 +780,7 @@ bool testBuildSwttlement(player *Players, int index) {
     if (Players[index].resource[BRICKS] >= 1 &&
         Players[index].resource[WOOD] >= 1 &&
         Players[index].resource[WHEAT] >= 1 &&
-        Players[index].resource[WOOL] >= 1) {
+        Players[index].resource[METAL] >= 1) {
         int count = 0;
         for (int i = 0; i < Players[index].haveNode->size; ++i) {
             if (corner[Players[index].haveNode->data[i]].type == SWTTLEMENT)
@@ -871,7 +873,7 @@ int useDevlopCard(player *Players, int index, int nowsz) {
         if (Players[index].card->data[choose] == KNIGHT) {
             chooseRobber(Players, index);
             stoleResource(Players, index);
-            Players[index].card->remove(Players[index].card, choose);
+            // Players[index].card->remove(Players[index].card, choose);
             Players[index].knight++;
 
             if (Players[index].knight >= 3) {
@@ -885,7 +887,7 @@ int useDevlopCard(player *Players, int index, int nowsz) {
                         if (strongestPerson == gamePlayer[id].type) break;
                         ++id;
                     }
-                    if (Players[index].road > gamePlayer[id].road) {
+                    if (Players[index].knight > gamePlayer[id].knight) {
                         gamePlayer[id].Score -= 2;
                         Players[index].Score += 2;
                         printf("you now are the strongest player\n");
@@ -936,74 +938,80 @@ int useDevlopCard(player *Players, int index, int nowsz) {
         } else if (Players[index].card->data[choose] == ROADBUILDING) {
             int landID, roadID;
             for (int k = 0; k < 2; ++k) {
-                while (1) {
-                    printf("choose a road\n");
-                    if (Players[index].bot) {
-                        botChooseBestRoad(land, Players, index, &landID,
-                                          &roadID);
-                        printf("%d %d\n", landID, roadID);
-                    } else {
-                        scanf("%d%d", &landID, &roadID);
-                    }
-                    if (land[landID].linkedSide[roadID]->belong == PUBLIC) {
-                        int check = 0;
-                        for (int l = 0; l < 2; ++l) {
-                            for (int k = 0; k < 3; ++k) {
-                                if (land[landID]
-                                            .linkedSide[roadID]
-                                            ->linkedNode[l] != NULL &&
-                                    land[landID]
-                                            .linkedSide[roadID]
-                                            ->linkedNode[l]
-                                            ->linkedSide[k] != NULL &&
-                                    land[landID]
-                                            .linkedSide[roadID]
-                                            ->linkedNode[l]
-                                            ->linkedSide[k]
-                                            ->belong == Players[index].type) {
-                                    check = 1;
-                                    break;
-                                }
-                            }
-                            if (check) break;
-                        }
-                        if (check) {
-                            land[landID].linkedSide[roadID]->belong =
-                                Players[index].type;
-                            land[landID].linkedSide[roadID]->type = ROAD;
-                            Players[index].haveSide->push(
-                                Players[index].haveSide,
-                                land[landID].linkedSide[roadID]->index);
-                            updateLongestRoad(Players, index);
-
-                            if (Players[index].road >= 5) {
-                                if (longestPerson == -1) {
-                                    longestPerson = Players[index].type;
-                                } else {
-                                    int id = 0;
-                                    while (1) {
-                                        if (longestPerson ==
-                                            gamePlayer[id].type)
-                                            break;
-                                        ++id;
-                                    }
-                                    if (Players[index].road >
-                                        gamePlayer[id].road) {
-                                        gamePlayer[id].Score -= 2;
-                                        Players[index].Score += 2;
-                                        longestPerson = Players[index].type;
-                                    }
-                                }
-                            }
-                            break;
+                if (testBuildRoad(Players, index)) {
+                    while (1) {
+                        printf("choose a road\n");
+                        if (Players[index].bot) {
+                            botChooseBestRoad(land, Players, index, &landID,
+                                              &roadID);
+                            printf("%d %d\n", landID, roadID);
                         } else {
-                            printf(
-                                "there had no your swttlement near "
-                                "here,input again\n");
+                            scanf("%d%d", &landID, &roadID);
                         }
-                    } else {
-                        printf("there had people here, input again\n");
+                        if (land[landID].linkedSide[roadID]->belong == PUBLIC) {
+                            int check = 0;
+                            for (int l = 0; l < 2; ++l) {
+                                for (int k = 0; k < 3; ++k) {
+                                    if (land[landID]
+                                                .linkedSide[roadID]
+                                                ->linkedNode[l] != NULL &&
+                                        land[landID]
+                                                .linkedSide[roadID]
+                                                ->linkedNode[l]
+                                                ->linkedSide[k] != NULL &&
+                                        land[landID]
+                                                .linkedSide[roadID]
+                                                ->linkedNode[l]
+                                                ->linkedSide[k]
+                                                ->belong ==
+                                            Players[index].type) {
+                                        check = 1;
+                                        break;
+                                    }
+                                }
+                                if (check) break;
+                            }
+                            if (check) {
+                                land[landID].linkedSide[roadID]->belong =
+                                    Players[index].type;
+                                land[landID].linkedSide[roadID]->type = ROAD;
+                                Players[index].haveSide->push(
+                                    Players[index].haveSide,
+                                    land[landID].linkedSide[roadID]->index);
+                                updateLongestRoad(Players, index);
+
+                                if (Players[index].road >= 5) {
+                                    if (longestPerson == -1) {
+                                        longestPerson = Players[index].type;
+                                    } else {
+                                        int id = 0;
+                                        while (1) {
+                                            if (longestPerson ==
+                                                gamePlayer[id].type)
+                                                break;
+                                            ++id;
+                                        }
+                                        if (Players[index].road >
+                                            gamePlayer[id].road) {
+                                            gamePlayer[id].Score -= 2;
+                                            Players[index].Score += 2;
+                                            longestPerson = Players[index].type;
+                                        }
+                                    }
+                                }
+                                break;
+                            } else {
+                                printf(
+                                    "there had no your swttlement near "
+                                    "here,input again\n");
+                            }
+                        } else {
+                            printf("there had people here, input again\n");
+                        }
                     }
+                } else {
+                    printf(
+                        "there have no place can build, stop card building\n");
                 }
             }
             Players[index].card->remove(Players[index].card, choose);

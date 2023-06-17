@@ -81,10 +81,11 @@ int botRobber(piece *land, int playerID) {
     return bestID;
 }
 int botUseCard(player *players, int index, int nowsz) {
-    // printf("    %d\n", nowsz);
+    printf("    %d %ld\n", nowsz, players[index].card->size);
+    // getchar();
     int haveK = -1;
     int haveRes = -1;
-    for (int i = 0; i < nowsz; ++i) {
+    for (int i = 0; i < min(nowsz, players[index].card->size); ++i) {
         if (players[index].card->data[i] == KNIGHT) {
             haveK = i;
             break;
